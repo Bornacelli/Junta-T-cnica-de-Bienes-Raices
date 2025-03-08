@@ -1,0 +1,15 @@
+@import 'flowbite';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.14) !important;
+  }
+
+.space {
+    margin: 0 23px !important;
+    margin-top: 21px !important;
+}
+
