@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { LayoutDashboard, LaptopMinimalCheck, Settings, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 import Logo from "../../assets/logo.png";
 
 const Sidebar = ({ isOpen = true, toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [configExpanded, setConfigExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
   
@@ -39,9 +41,9 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
   };
   
   const confirmLogout = () => {
-    localStorage.removeItem('authToken');
-    sessionStorage.clear();
+    logout(); // Usar la función logout del contexto
     navigate('/login');
+    setShowModal(false);
   };
   
   const cancelLogout = () => {
@@ -50,6 +52,14 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
   
   const toggleConfig = () => {
     setConfigExpanded(!configExpanded);
+  };
+  
+  // Manejador para cierre al hacer clic fuera del modal
+  const handleBackdropClick = (e) => {
+    // Solo cerrar si el clic fue directamente en el backdrop y no en su contenido
+    if (e.target === e.currentTarget) {
+      setShowModal(false);
+    }
   };
   
   return (
@@ -186,7 +196,10 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
       
       {/* Modal Cerrar Sesión */}
       {showModal && (
-        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 bg-black bg-opacity-50"
+          onClick={handleBackdropClick} // Añadido manejador de eventos aquí
+        >
           <div className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-md">
             <div className="flex items-center mb-4">
               <div className="bg-red-100 p-2 rounded-full mr-3">

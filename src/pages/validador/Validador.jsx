@@ -2,19 +2,19 @@ import { useState } from 'react';
 import { SearchCheck, CircleCheck, AlertTriangle, XCircle, CalendarArrowDown, CalendarArrowUp, Scale, User } from 'lucide-react';
 
 const Validador = () => {
-  const [licencia, setLicencia] = useState('222');
-  const [estado, setEstado] = useState('validada'); // Puede ser: 'validada', 'suspendida', 'cancelada', 'noEncontrada' o null (cuando no hay resultado)
-  const [mostrarResultado, setMostrarResultado] = useState(true);
+  const [licencia, setLicencia] = useState('');
+  const [estado, setEstado] = useState(null); // Puede ser: 'validada', 'suspendida', 'cancelada', 'noEncontrada' o null (cuando no hay resultado)
+  const [mostrarResultado, setMostrarResultado] = useState(false);
   const [datosFicticios, setDatosFicticios] = useState({
-    personaJuridica: 'Inversiones Natasha, S.A.',
-    representanteLegal: 'Natasha Sucre',
-    fechaEmision: '18/12/2020',
-    fechaVencimiento: '18/12/2025'
+    personaJuridica: '',
+    representanteLegal: '',
+    fechaEmision: '',
+    fechaVencimiento: ''
   });
 
   const handleChange = (e) => {
     setLicencia(e.target.value);
-    setMostrarResultado(false);
+    // No cambiamos mostrarResultado aquí para que no desaparezca el resultado al escribir
   };
 
   const handleSubmit = (e) => {

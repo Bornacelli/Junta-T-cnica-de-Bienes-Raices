@@ -1,6 +1,5 @@
-import  { useState, useCallback, useRef } from 'react';
-import { Calendar, Upload, X, FileText, File } from 'lucide-react';
-import { useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Calendar, Upload, X, FileText, File, CheckCircle } from 'lucide-react';
 
 const ContenidoCargaArchivos = () => {
   const [fecha, setFecha] = useState('06/02/2025');
@@ -8,6 +7,8 @@ const ContenidoCargaArchivos = () => {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [showNotification, setShowNotification] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const datePickerRef = useRef(null);
   const inputRef = useRef(null);
   
@@ -26,6 +27,16 @@ const ContenidoCargaArchivos = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  
+  // Auto-ocultar la notificación después de 5 segundos
+  useEffect(() => {
+    if (showNotification) {
+      const timer = setTimeout(() => {
+        setShowNotification(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showNotification]);
   
   // Manejo de carga de archivos
   const handleDrag = useCallback((e) => {
@@ -87,10 +98,22 @@ const ContenidoCargaArchivos = () => {
   
   // Función para manejar la carga del archivo
   const handleUpload = () => {
+    // Guardar temporalmente el nombre del archivo antes de limpiarlo
+    const uploadedFileName = file ? file.name : "Archivo";
+    
+    setIsLoading(true);
     console.log('Archivo a cargar:', file);
     console.log('Fecha seleccionada:', fecha);
-    // Aquí implementarías la lógica de subida del archivo
-    alert("Archivo seleccionado: " + (file ? file.name : "Ninguno"));
+    
+    // Simular la carga del archivo con un temporizador
+    setTimeout(() => {
+      setIsLoading(false);
+      // Limpiar el archivo y la previsualización
+      setFile(null);
+      setPreview(null);
+      // Mostrar la notificación con el nombre del archivo que se cargó
+      setShowNotification(uploadedFileName);
+    }, 1500); // Simular una carga de 1.5 segundos
   };
 
   // Generar días del mes actual
@@ -141,10 +164,36 @@ const ContenidoCargaArchivos = () => {
     return monthNames[month - 1];
   };
 
+  // Componente de notificación
+  const Notification = () => {
+    if (!showNotification) return null;
+    
+    return (
+      <div className="fixed top-5 right-0 flex items-center p-4 mb-4 text-green-800 rounded-lg bg-green-50 shadow-lg z-50" role="alert">
+        <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg">
+          <CheckCircle size={20} />
+        </div>
+        <div className="ml-3 text-sm font-medium mr-10">
+          Archivo "{typeof showNotification === 'string' ? showNotification : 'seleccionado'}" cargado exitosamente.
+        </div>
+        <button 
+          type="button" 
+          className="ml-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8"
+          onClick={() => setShowNotification(false)}
+        >
+          <X size={16} />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex-1 p-6">
       <div className="bg-white rounded-lg shadow-sm p-6 h-full flex flex-col">
         <h2 className="text-xl font-medium text-gray-700 mb-6 mt-4 mx-4">Carga de Archivos</h2>
+        
+        {/* Notificación fuera del flujo normal para posición fija */}
+        <Notification />
         
         {/* Área principal con previsualización aumentada */}
         <div className="flex-grow mb-6">
@@ -153,24 +202,24 @@ const ContenidoCargaArchivos = () => {
           {/* Área de carga de archivos con previsualización */}
           {!file ? (
            <div 
-           className={`border-1 border-dashed border-blue-500 mx-4 pb-8 pt-8 ${dragActive ? 'border-blue-500 bg-blue-100' : 'border-blue-500 bg-blue-50'} 
+             className={`border-1 border-dashed border-blue-500 mx-4 pb-8 pt-8 ${dragActive ? 'border-blue-500 bg-blue-100' : 'border-blue-500 bg-blue-50'} 
                       rounded-lg flex flex-col items-center justify-center h-full min-h-screen relative`}
-           style={{ borderColor: '#3368DB' }}
-           onDragEnter={handleDrag}
-           onDragLeave={handleDrag}
-           onDragOver={handleDrag}
-           onDrop={handleDrop}
-         >
-           <Upload className="text-gray-400 mb-4" size={40} />
-           <p className="text-gray-500 text-center">
-             Haga clic para agregar <span className="text-gray-400">o arrastre y suelte</span>
-           </p>
-           <input 
-             type="file" 
-             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-             onChange={handleFileChange}
-           />
-         </div>
+             style={{ borderColor: '#3368DB' }}
+             onDragEnter={handleDrag}
+             onDragLeave={handleDrag}
+             onDragOver={handleDrag}
+             onDrop={handleDrop}
+           >
+             <Upload className="text-gray-400 mb-4" size={40} />
+             <p className="text-gray-500 text-center">
+               Haga clic para agregar <span className="text-gray-400">o arrastre y suelte</span>
+             </p>
+             <input 
+               type="file" 
+               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+               onChange={handleFileChange}
+             />
+           </div>
          
           ) : (
             // Contenedor principal de previsualización - Aumentado en tamaño
@@ -229,88 +278,100 @@ const ContenidoCargaArchivos = () => {
         </div>
         
         <div className="mb-6 mx-4">
-  <label className="block text-gray-700 mb-2 text-lg">Acta actualizada hasta:</label>
-  <div className="relative w-full max-w-md">
-    <input
-      ref={inputRef}
-      type="text"
-      value={fecha}
-      onChange={(e) => setFecha(e.target.value)}
-      className="w-full py-3 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-      onClick={() => setShowDatePicker(true)}
-      readOnly
-    />
-    <div 
-      className="absolute inset-y-0 right-0 flex items-center px-4 bg-gray-100 rounded-r-lg border-l border-gray-300 cursor-pointer"
-      onClick={() => setShowDatePicker(!showDatePicker)}
-    >
-      <Calendar className="text-gray-500" size={20} />
-    </div>
-    
-    {showDatePicker && (
-      <div
-        ref={datePickerRef}
-        className="absolute top-full mt-1 left-0 bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden z-10"
-      >
-        <div className="p-2 bg-blue-500 text-white flex justify-between items-center">
-          <button
-            className="p-1 rounded hover:bg-blue-600"
-            onClick={handlePrevMonth}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <span>{getMonthName(currentMonth)} {currentYear}</span>
-          <button
-            className="p-1 rounded hover:bg-blue-600"
-            onClick={handleNextMonth}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-2">
-          <div className="grid grid-cols-7 gap-1">
-            {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'].map((day, i) => (
-              <div key={i} className="text-center text-xs text-gray-500 p-1">{day}</div>
-            ))}
-            {generateDays().map((day, i) => (
-              day ? (
-                <button
-                  key={i}
-                  className={`w-8 h-8 rounded-full text-sm hover:bg-blue-100
-                          ${fecha === formatDate(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}`}
-                  onClick={() => {
-                    setFecha(formatDate(day));
-                    setShowDatePicker(false);
-                  }}
-                >
-                  {day}
-                </button>
-              ) : (
-                <div key={i} className="w-8 h-8"></div>
-              )
-            ))}
+          <label className="block text-gray-700 mb-2 text-lg">Acta actualizada hasta:</label>
+          <div className="relative w-full max-w-md">
+            <input
+              ref={inputRef}
+              type="text"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="w-full py-3 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+              onClick={() => setShowDatePicker(true)}
+              readOnly
+            />
+            <div 
+              className="absolute inset-y-0 right-0 flex items-center px-4 bg-gray-100 rounded-r-lg border-l border-gray-300 cursor-pointer"
+              onClick={() => setShowDatePicker(!showDatePicker)}
+            >
+              <Calendar className="text-gray-500" size={20} />
+            </div>
+            
+            {showDatePicker && (
+              <div
+                ref={datePickerRef}
+                className="absolute top-full mt-1 left-0 bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden z-10"
+              >
+                <div className="p-2 bg-blue-500 text-white flex justify-between items-center">
+                  <button
+                    className="p-1 rounded hover:bg-blue-600"
+                    onClick={handlePrevMonth}
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span>{getMonthName(currentMonth)} {currentYear}</span>
+                  <button
+                    className="p-1 rounded hover:bg-blue-600"
+                    onClick={handleNextMonth}
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-2">
+                  <div className="grid grid-cols-7 gap-1">
+                    {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'].map((day, i) => (
+                      <div key={i} className="text-center text-xs text-gray-500 p-1">{day}</div>
+                    ))}
+                    {generateDays().map((day, i) => (
+                      day ? (
+                        <button
+                          key={i}
+                          className={`w-8 h-8 rounded-full text-sm hover:bg-blue-100
+                                  ${fecha === formatDate(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}`}
+                          onClick={() => {
+                            setFecha(formatDate(day));
+                            setShowDatePicker(false);
+                          }}
+                        >
+                          {day}
+                        </button>
+                      ) : (
+                        <div key={i} className="w-8 h-8"></div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    )}
-  </div>
-</div>
         
         <div className="flex justify-end mb-6">
           <button 
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
               file 
-                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                ? isLoading 
+                  ? 'bg-blue-400 text-white cursor-not-allowed'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
             onClick={handleUpload}
-            disabled={!file}
+            disabled={!file || isLoading}
           >
-            Cargar Archivo
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Cargando...
+              </>
+            ) : (
+              'Cargar Archivo'
+            )}
           </button>
         </div>
       </div>

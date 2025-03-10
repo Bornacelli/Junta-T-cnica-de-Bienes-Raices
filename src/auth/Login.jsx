@@ -1,21 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Login = () => {
-  const { login } = useAuth(); // Función login desde el contexto
-  const navigate = useNavigate(); // Navegación programática
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Simulación de autenticación
     if (email === 'test@test.com' && password === 'test') {
-      login({ email, token: 'fake-jwt-token' }); // Llama a la función de login del contexto
-      navigate('/dashboard'); // Redirige al dashboard después del login
+      login({ email, token: 'fake-jwt-token' });
+      navigate('/dashboard');
     } else {
       setError('Correo o contraseña incorrectos');
     }
@@ -73,18 +80,18 @@ const Login = () => {
               />
             </div>
             {error && (
-              <p className="text-red-500 text-sm">{error}</p> // Muestra errores
+              <p className="text-red-500 text-sm">{error}</p>
             )}
             <div className="flex items-center justify-between">
               <div className="flex items-start">
                 
               </div>
-              <a
-                href="#"
+              <Link
+                to="/forgot-password"
                 className="text-sm font-light text-blue-600 hover:underline dark:text-primary-500"
               >
-               ¿Olvidaste tu contraseña?
-              </a>
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <button

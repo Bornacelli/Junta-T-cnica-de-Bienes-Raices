@@ -7,7 +7,6 @@ const UsersList = () => {
   const [users, setUsers] = useState([
     { code: '00000000000', name: 'Melissa Castro', email: 'melicadmin@emp.co', phone: '33333333', type: 'Administrador', status: 'Activo' },
     { code: '00000000000', name: 'Melissa Castro', email: 'melicadmin@emp.co', phone: '33333333', type: 'Administrador', status: 'Activo' },
-    { code: '00000000000', name: 'Melissa Castro', email: 'melicadmin@emp.co', phone: '33333333', type: 'Cliente', status: 'Inactivo' },
   ]);
   
   // Estado para filtros
@@ -53,7 +52,8 @@ const UsersList = () => {
 
   // Funciones para manejar acciones
   const handleCreateUser = () => {
-    // Abrir el modal de creación
+    // Abrir el modal de creación y asegurarse de que selectedUser es null
+    setSelectedUser(null);
     setCreateUserModalOpen(true);
   };
 
@@ -73,7 +73,7 @@ const UsersList = () => {
   };
   
   const handleSaveUser = (userData) => {
-    if (selectedUser) {
+    if (editModalOpen && selectedUser) {
       // Actualizar usuario existente
       setUsers(prevUsers => 
         prevUsers.map(user => 
@@ -86,12 +86,17 @@ const UsersList = () => {
       setUsers(prevUsers => [...prevUsers, userData]);
       setCreateUserModalOpen(false);
     }
+    setSelectedUser(null);
   };
   
-  const handleConfirmDelete = (user) => {
-    setUsers(prevUsers => 
-      prevUsers.filter(u => u !== user)
-    );
+  const handleConfirmDelete = () => {
+    if (selectedUser) {
+      setUsers(prevUsers => 
+        prevUsers.filter(user => user !== selectedUser)
+      );
+      setDeleteModalOpen(false);
+      setSelectedUser(null);
+    }
   };
   
   // Función para aplicar filtro

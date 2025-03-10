@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
-import Login from '../pages/Login';
-import Dashboard from '../pages/validador/Dashboard/Dashboard';
+import Login from '../auth/Login';
+import ForgotPassword from '../auth/ForgotPassword';
+import Dashboard from '../pages/Dashboard/Dashboard';
 import Layout from '../components/layout/layout';
 
 import Validador from '../pages/validador/Validador';
@@ -17,6 +18,7 @@ function AppRoutes() {
         <Routes>
           {/* Pantalla de login */}
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Ruta protegida */}
           <Route element={<ProtectedRoute />}>

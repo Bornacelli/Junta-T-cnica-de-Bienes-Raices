@@ -2,19 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { X, User, UserRoundPen, UserPlus } from 'lucide-react';
 
 // Modal para Ver Usuario
-
-
 export const ViewUserModal = ({ isOpen, onClose, user }) => {
-  if (!isOpen) return null;
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      // Allow time for exit animation
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isOpen && !isAnimating) return null;
+  
+  // Function to get status styling based on status value
+  const getStatusStyles = (status) => {
+    switch (status) {
+      case 'Activo':
+        return 'bg-green-100 text-green-600';
+      case 'Inactivo':
+        return 'bg-red-100 text-red-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
 
   return (
     <div
-      className="fixed inset-0 modal-backdrop flex items-center justify-center z-50"
-      onClick={onClose} // Cierra el modal al hacer clic en el fondo
+      className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+      onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg shadow-lg w-4/5 max-w-lg p-6 relative"
-        onClick={(e) => e.stopPropagation()} // Evita que el clic dentro del modal lo cierre
+        className={`bg-white rounded-lg shadow-lg w-4/5 max-w-lg p-6 relative transition-all duration-300 ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-700 flex items-center">
@@ -23,7 +47,7 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
           </h2>
           <div style={{ width: "80%", height: "0.5px", backgroundColor: "#4F81EE", margin: "10px 0 0 0" }}></div>
         </div>
-
+        
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -35,7 +59,7 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
               <p className="text-gray-800">{user?.code || "N/A"}</p>
             </div>
           </div>
-
+          
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Correo Electrónico</h3>
@@ -46,7 +70,7 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
               <p className="text-gray-800">{user?.phone || "N/A"}</p>
             </div>
           </div>
-
+          
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Tipo de Usuario</h3>
@@ -54,13 +78,13 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Estado</h3>
-              <p className="inline-block px-3 py-1 text-xs rounded-full bg-green-100 text-green-600 font-medium">
+              <p className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${getStatusStyles(user?.status)}`}>
                 {user?.status || "N/A"}
               </p>
             </div>
           </div>
         </div>
-
+        
         <div className="mt-8 flex justify-end">
           <button
             onClick={onClose}
@@ -74,9 +98,9 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
   );
 };
 
-
 // Modal para Editar Usuario
 export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -85,6 +109,20 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
     type: 'Cliente',
     status: 'Activo'
   });
+  
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      // Allow time for exit animation
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (user) {
@@ -96,35 +134,92 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
         type: user.type || 'Cliente',
         status: user.status || 'Activo'
       });
+      setErrors({});
     }
   }, [user]);
 
+  if (!isOpen && !isAnimating) return null;
+
+  const validateField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'name':
+        if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(value)) {
+          error = 'Solo se permiten letras y espacios';
+        }
+        break;
+      case 'code':
+        if (!/^\d+$/.test(value)) {
+          error = 'Solo se permiten números';
+        }
+        break;
+      case 'email':
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = 'Formato de correo inválido';
+        }
+        break;
+      case 'phone':
+        if (!/^\d+$/.test(value)) {
+          error = 'Solo se permiten números';
+        }
+        break;
+      default:
+        break;
+    }
+    
+    return error;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Validar según el tipo de campo
+    if (name === 'phone' || name === 'code') {
+      // Solo permitir números
+      if (/^\d*$/.test(value)) {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
+    // Validar y actualizar errores
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    
+    // Validar todos los campos antes de enviar
+    let formErrors = {};
+    let isValid = true;
+    
+    Object.entries(formData).forEach(([key, value]) => {
+      const error = validateField(key, value);
+      if (error) {
+        formErrors[key] = error;
+        isValid = false;
+      }
+    });
+    
+    setErrors(formErrors);
+    
+    if (isValid) {
+      onSave(formData);
+    }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50"
-    
-    onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-lg w-4/5 p-6 relative"
-      onClick={(e) => e.stopPropagation()} 
+    <div 
+      className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100 backdrop-blur-sm bg-black/50' : 'opacity-0'}`}
+      onClick={onClose}
+    >
+      <div 
+        className={`bg-white rounded-lg shadow-lg w-4/5 p-6 relative transition-all duration-300 ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-8'}`}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* <button 
-          onClick={onClose} 
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-        >
-          <X size={20} />
-        </button> */}
-        
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-700 flex items-center">
             <UserRoundPen className="mr-2 text-blue-500" size={25} />
@@ -133,7 +228,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
           <div style={{ width: "80%", height: "0.5px", backgroundColor: "#4F81EE", margin: "10px 0 0 0" }}></div>
         </div>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div>
@@ -145,9 +240,12 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className={`w-full px-3 py-2 border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md`}
                   required
                 />
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -158,9 +256,13 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
                   name="code"
                   value={formData.code}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className={`w-full px-3 py-2 border ${errors.code ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  inputMode="numeric"
                   required
                 />
+                {errors.code && (
+                  <p className="text-red-500 text-xs mt-1">{errors.code}</p>
+                )}
               </div>
             </div>
             
@@ -174,22 +276,29 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className={`w-full px-3 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-md`}
                   required
                 />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Teléfono
                 </label>
                 <input
-                  type="text"
+                  type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className={`w-full px-3 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  inputMode="numeric"
                   required
                 />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                )}
               </div>
             </div>
             
@@ -248,194 +357,294 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
 
 // Modal para Crear Usuario Nuevo
 export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
-    // Estado inicial siempre vacío para el modal de creación
-    const [formData, setFormData] = useState({
-      name: '',
-      code: '',
-      email: '',
-      phone: '',
-      type: 'Cliente',
-      status: 'Activo'
-    });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    email: '',
+    phone: '',
+    type: 'Cliente',
+    status: 'Activo'
+  });
   
-    // Asegurarse de que los campos estén vacíos cuando se abre el modal
-    useEffect(() => {
-      if (isOpen) {
-        setFormData({
-          name: '',
-          code: '',
-          email: '',
-          phone: '',
-          type: 'Cliente',
-          status: 'Activo'
-        });
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      // Allow time for exit animation
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Asegurarse de que los campos estén vacíos cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: '',
+        code: '',
+        email: '',
+        phone: '',
+        type: 'Cliente',
+        status: 'Activo'
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
+
+  if (!isOpen && !isAnimating) return null;
+
+  const validateField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'name':
+        if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(value)) {
+          error = 'Solo se permiten letras y espacios';
+        }
+        break;
+      case 'code':
+        if (!/^\d+$/.test(value)) {
+          error = 'Solo se permiten números';
+        }
+        break;
+      case 'email':
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = 'Formato de correo inválido';
+        }
+        break;
+      case 'phone':
+        if (!/^\d+$/.test(value)) {
+          error = 'Solo se permiten números';
+        }
+        break;
+      default:
+        break;
+    }
+    
+    return error;
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Validar según el tipo de campo
+    if (name === 'phone' || name === 'code') {
+      // Solo permitir números
+      if (/^\d*$/.test(value)) {
+        setFormData(prev => ({ ...prev, [name]: value }));
       }
-    }, [isOpen]);
-  
-    const handleChange = (e) => {
-      const { name, value } = e.target;
+    } else {
       setFormData(prev => ({ ...prev, [name]: value }));
-    };
-  
-    const handleSubmit = (e) => {
-      e.preventDefault();
+    }
+    
+    // Validar y actualizar errores
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validar todos los campos antes de enviar
+    let formErrors = {};
+    let isValid = true;
+    
+    Object.entries(formData).forEach(([key, value]) => {
+      const error = validateField(key, value);
+      if (error) {
+        formErrors[key] = error;
+        isValid = false;
+      }
+    });
+    
+    setErrors(formErrors);
+    
+    if (isValid) {
       onSave(formData);
-      // No es necesario resetear el formulario aquí porque el efecto lo hará cuando se vuelva a abrir
-    };
-  
-    if (!isOpen) return null;
-  
-    return (
-      <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50"
+    }
+  };
+
+  return (
+    <div 
+      className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100 backdrop-blur-sm bg-black/50' : 'opacity-0'}`}
       onClick={onClose}
+    >
+      <div 
+        className={`bg-white rounded-lg shadow-lg w-4/5 p-6 relative transition-all duration-300 ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-8'}`}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-white rounded-lg shadow-lg w-4/5 p-6 relative"
-            onClick={(e) => e.stopPropagation()} 
-        >
-          {/* <button 
-            onClick={onClose} 
-            className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-          >
-            <X size={20} />
-          </button> */}
-          
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-700 flex items-center">
-              <UserPlus className="mr-2 text-blue-500" size={25} />
-              Crear un Usuario Nuevo
-            </h2>
-            <div style={{ width: "80%", height: "0.5px", backgroundColor: "#4F81EE", margin: "10px 0 0 0" }}></div>
-          </div>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-800">Información del Usuario</h3>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre Completo
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Juan Pérez"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    N° Documento de Identidad
-                  </label>
-                  <input
-                    type="text"
-                    name="code"
-                    value={formData.code}
-                    onChange={handleChange}
-                    placeholder="00000000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-700 flex items-center">
+            <UserPlus className="mr-2 text-blue-500" size={25} />
+            Crear un Usuario Nuevo
+          </h2>
+          <div style={{ width: "80%", height: "0.5px", backgroundColor: "#4F81EE", margin: "10px 0 0 0" }}></div>
+        </div>
+        
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium text-gray-800">Información del Usuario</h3>
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Juan Pérez"
+                  className={`w-full px-3 py-2 border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  required
+                />
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Correo Electrónico
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="correo@mail.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Teléfono
-                  </label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="000000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Usuario
-                  </label>
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="Administrador">Administrador</option>
-                    <option value="Cliente">Cliente</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Estado
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  N° Documento de Identidad
+                </label>
+                <input
+                  type="text"
+                  name="code"
+                  value={formData.code}
+                  onChange={handleChange}
+                  placeholder="00000000"
+                  className={`w-full px-3 py-2 border ${errors.code ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  inputMode="numeric"
+                  required
+                />
+                {errors.code && (
+                  <p className="text-red-500 text-xs mt-1">{errors.code}</p>
+                )}
               </div>
             </div>
             
-            <div className="mt-8 flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cerrar
-              </button>
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
-              >
-                Finalizar Registro
-              </button>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Correo Electrónico
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="correo@mail.com"
+                  className={`w-full px-3 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  required
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Teléfono
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="000000"
+                  className={`w-full px-3 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                  inputMode="numeric"
+                  required
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                )}
+              </div>
             </div>
-          </form>
-        </div>
+            
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Usuario
+                </label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Administrador">Administrador</option>
+                  <option value="Cliente">Cliente</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cerrar
+            </button>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
+            >
+              Finalizar Registro
+            </button>
+          </div>
+        </form>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 // Modal para Confirmar Eliminación
 export const DeleteUserModal = ({ isOpen, onClose, user, onConfirm }) => {
-  if (!isOpen) return null;
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      // Allow time for exit animation
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isOpen && !isAnimating) return null;
   
   return (
-    <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50"
-    onClick={onClose}
+    <div 
+      className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100 backdrop-blur-sm bg-black/50' : 'opacity-0'}`}
+      onClick={onClose}
     >
-      <div className="bg-white rounded-lg shadow-lg w-4/5 max-w-md p-6"
-        onClick={(e) => e.stopPropagation()} 
+      <div 
+        className={`bg-white rounded-lg shadow-lg w-4/5 max-w-md p-6 transition-all duration-300 ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
@@ -471,4 +680,3 @@ export const DeleteUserModal = ({ isOpen, onClose, user, onConfirm }) => {
     </div>
   );
 };
-
