@@ -17,7 +17,8 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
     if (path === '/dashboard') return 'principal';
     if (path === '/validador') return 'validador';
     if (path === '/configuracion/archivos') return 'config-item1';
-    if (path === '/configuracion/usuarios') return 'config-item2';
+    if (path === '/configuracion/corredordebienes') return 'config-item2'
+    if (path === '/configuracion/usuarios') return 'config-item3';
     return '';
   };
   
@@ -124,7 +125,7 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
             <button 
               onClick={toggleConfig} 
               className={`flex items-center w-full px-4 py-3 mb-4 rounded-lg text-center justify-center ${
-                (activeLink === 'config-item1' || activeLink === 'config-item2') && !configExpanded
+                (activeLink === 'config-item1' || activeLink === 'config-item2' || activeLink === 'config-item3') && !configExpanded
                 ? ' font-medium' 
                 : 'text-white hover:bg-blue-700'
               }`}
@@ -155,11 +156,20 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
                   Cargar Archivos
                 </button>
                 <button 
-                  onClick={() => handleLinkClick('config-item2', '/configuracion/usuarios')} 
-                  className={`w-full text-center py-3 px-4 rounded-md ${
+                  onClick={() => handleLinkClick('config-item2', '/configuracion/corredordebienes')} 
+                  className={`w-full text-center py-3 px-4 rounded-md mb-4 ${
                     activeLink === 'config-item2' ? 'bg-white font-medium' : 'text-white hover:bg-blue-700'
                   }`}
                   style={{ color: activeLink === 'config-item2' ? 'black' : 'white' }}
+                >
+                  Corredor de Bienes
+                </button>
+                <button 
+                  onClick={() => handleLinkClick('config-item3', '/configuracion/usuarios')} 
+                  className={`w-full text-center py-3 px-4 rounded-md ${
+                    activeLink === 'config-item3' ? 'bg-white font-medium' : 'text-white hover:bg-blue-700'
+                  }`}
+                  style={{ color: activeLink === 'config-item3' ? 'black' : 'white' }}
                 >
                   Usuarios
                 </button>
