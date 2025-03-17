@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, UserRoundPen, UserPlus } from 'lucide-react';
+import { X, User, UserRoundPen, UserPlus, Copy, Check } from 'lucide-react';
 
 // Modal para Ver Usuario
 export const ViewUserModal = ({ isOpen, onClose, user }) => {
@@ -52,34 +52,34 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Nombre Completo</h3>
-              <p className="text-gray-800">{user?.name || "N/A"}</p>
+              <p className="text-gray-800">{user?.usu_nombre || "N/A"}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">N° Documento de Identidad</h3>
-              <p className="text-gray-800">{user?.code || "N/A"}</p>
+              <p className="text-gray-800">{user?.usu_documento || "N/A"}</p>
             </div>
           </div>
           
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Correo Electrónico</h3>
-              <p className="text-blue-500">{user?.email || "N/A"}</p>
+              <p className="text-blue-500">{user?.usu_correo || "N/A"}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Teléfono</h3>
-              <p className="text-gray-800">{user?.phone || "N/A"}</p>
+              <p className="text-gray-800">{user?.usu_telefono || "N/A"}</p>
             </div>
           </div>
           
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Tipo de Usuario</h3>
-              <p className="text-gray-800">{user?.type || "N/A"}</p>
+              <p className="text-gray-800">{user?.usu_rol || "N/A"}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Estado</h3>
-              <p className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${getStatusStyles(user?.status)}`}>
-                {user?.status || "N/A"}
+              <p className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${getStatusStyles(user.usu_estado === 1 ? 'Activo' : 'Inactivo')}`}>
+              {user.usu_estado === 1 ? 'Activo' : 'Inactivo'}
               </p>
             </div>
           </div>
@@ -99,8 +99,9 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
 };
 
 // Modal para Editar Usuario
-export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
+export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus }) => {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [formError, setFormError] = useState(""); // Añadir estado para el error
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -109,12 +110,29 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
     type: 'Cliente',
     status: 'Activo'
   });
+
+  const handleToggleStatus = (e) => {
+    if (!user || !user.usu_id) {
+      console.error('No hay usuario válido para cambiar estado');
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Asegúrate de pasar solo el usuario, no el evento
+    onToggleStatus(user);
+    
+    // Cierra el modal después de iniciar la acción
+    onClose();
+  };
   
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
+      setFormError(""); // Limpiar error al abrir el modal
     } else {
       // Allow time for exit animation
       const timer = setTimeout(() => {
@@ -127,14 +145,16 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || '',
-        code: user.code || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        type: user.type || 'Cliente',
-        status: user.status || 'Activo'
+        name: user.usu_nombre || '',
+        code: user.usu_documento || '',
+        email: user.usu_correo || '',
+        phone: user.usu_telefono || '',
+        type: user.usu_rol || 'Cliente',
+        // Mantenemos el estado pero ya no se mostrará en un select
+        status: user.usu_estado === 1 ? 'Activo' : 'Inactivo'
       });
       setErrors({});
+      setFormError(""); // Limpiar errores cuando se carga un nuevo usuario
     }
   }, [user]);
 
@@ -189,7 +209,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validar todos los campos antes de enviar
@@ -205,9 +225,15 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
     });
     
     setErrors(formErrors);
+    setFormError(""); // Limpiar error general anterior
     
     if (isValid) {
-      onSave(formData);
+      const result = await onSave(formData);
+      
+      // Si hay error, mostrarlo
+      if (result && result.error) {
+        setFormError(result.message);
+      }
     }
   };
 
@@ -317,22 +343,14 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
                   <option value="Cliente">Cliente</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estado
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </div>
             </div>
           </div>
+
+          {formError && (
+            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              <p className=''>{formError}</p>
+            </div>
+          )}
           
           <div className="mt-8 flex justify-end space-x-4">
             <button
@@ -357,6 +375,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave }) => {
 
 // Modal para Crear Usuario Nuevo
 export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
+  const [formError, setFormError] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -373,7 +392,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
     if (isOpen) {
       setIsAnimating(true);
     } else {
-      // Allow time for exit animation
+      
       const timer = setTimeout(() => {
         setIsAnimating(false);
       }, 300);
@@ -447,7 +466,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validar todos los campos antes de enviar
@@ -463,9 +482,16 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
     });
     
     setErrors(formErrors);
+    setFormError(""); // Limpiar error general anterior
     
     if (isValid) {
-      onSave(formData);
+      console.log('Enviando datos del formulario:', formData);
+      const result = await onSave(formData);
+      
+      // Si hay error, mostrarlo
+      if (result && result.error) {
+        setFormError(result.message);
+      }
     }
   };
 
@@ -577,11 +603,11 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="Administrador">Administrador</option>
+                  <option value="Administrador">ADMINISTRADOR</option>
                   <option value="Cliente">Cliente</option>
                 </select>
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Estado
                 </label>
@@ -594,9 +620,15 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
-              </div>
+              </div> */}
             </div>
           </div>
+
+          {formError && (
+              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700  rounded">
+                <p className=''>{formError}</p>
+              </div>
+            )}
           
           <div className="mt-8 flex justify-end space-x-4">
             <button
@@ -674,6 +706,79 @@ export const DeleteUserModal = ({ isOpen, onClose, user, onConfirm }) => {
             className="px-6 py-2 bg-red-600 border border-transparent rounded-md text-white hover:bg-red-700"
           >
             Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const PasswordModal = ({ isOpen, onClose, password }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAnimating(true);
+    } else {
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(password);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!isOpen && !isAnimating) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-300 backdrop-blur-sm modal-backdrop"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-lg w-96 p-6 relative transition-all duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-700">
+            Usuario Creado Exitosamente
+          </h2>
+          <div style={{ width: "80%", height: "0.5px", backgroundColor: "#4F81EE", margin: "10px 0 0 0" }}></div>
+        </div>
+        
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Se ha generado automáticamente una contraseña para este usuario:
+          </p>
+          
+          <div className="flex items-center justify-between bg-gray-100 p-3 rounded">
+            <code className="font-mono text-sm">{password}</code>
+            <button 
+              onClick={handleCopyPassword} 
+              className="text-blue-500 hover:text-blue-700"
+              title="Copiar contraseña"
+            >
+              {copied ? <Check size={20} /> : <Copy size={20} />}
+            </button>
+          </div>
+          
+          <p className="text-sm text-gray-500">
+            Por favor, guarde esta contraseña en un lugar seguro o compártala con el usuario.
+          </p>
+        </div>
+        
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+          >
+            Entendido
           </button>
         </div>
       </div>

@@ -1,24 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, Edit, Trash2, ChevronDown, Plus, Filter } from 'lucide-react';
-import { ViewUserModal, EditUserModal, DeleteUserModal, CreateUserModal } from './UserModals'; // Importamos los modales
+import { Eye, Edit, Trash2, ChevronDown, Plus, Filter, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ViewUserModal, EditUserModal, DeleteUserModal, CreateUserModal, PasswordModal } from './UserModals'; // Importamos los modales
+import api from '../../../services/ApiService';
 
 const UsersList = () => {
-  // Estado local para los usuarios
-  const [users, setUsers] = useState([
-    { code: '00000000000', name: 'Melissa Castro', email: 'melicadmin@emp.co', phone: '33333333', type: 'Administrador', status: 'Activo' },
-    { code: '00000000000', name: 'Melissa Castro', email: 'melicadmin@emp.co', phone: '33333333', type: 'Administrador', status: 'Activo' },
-  ]);
+  
+  // Estado los usuarios
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false); // Estado para controlar carga durante acciones
   
   // Estado para filtros
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterBy, setFilterBy] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState(users);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   
   // Estados para los modales
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState("");
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   
   // Ref para el dropdown de filtros
@@ -27,11 +31,66 @@ const UsersList = () => {
   // Opciones de filtro
   const filterOptions = [
     { label: 'Todos', value: '' },
-    { label: 'Administrador', value: 'Administrador' },
+    { label: 'Administrador', value: 'ADMINISTRADOR' },
     { label: 'Cliente', value: 'Cliente' },
     { label: 'Activo', value: 'status-Activo' },
     { label: 'Inactivo', value: 'status-Inactivo' }
   ];
+
+  // Agrega esta nueva función en UsersList, separada de las otras funciones de manejo
+
+// Función segura y aislada para cambiar estado
+const handleToggleStatusSafe = async (userToToggle) => {
+  if (!userToToggle || !userToToggle.usu_id) {
+    console.error('Error: No se proporcionó usuario válido para toggle');
+    return;
+  }
+  
+  try {
+    setActionLoading(true);
+    
+    // Guarda el ID del usuario de forma segura
+    const userId = userToToggle.usu_id;
+    
+    console.log('Cambiando estado del usuario con ID:', userId);
+    
+    // Llamar a la API para cambiar estado
+    const response = await api.post('/usuario_inactivar.php', {
+      usu_id: userId
+    });
+    
+    console.log('Respuesta de inactivación:', response);
+    
+    // Actualizar estado local de forma segura
+    setUsers(prevUsers => {
+      return prevUsers.map(u => {
+        if (u.usu_id === userId) {
+          const newState = u.usu_estado === 1 ? 0 : 1;
+          console.log(`Cambiando estado de usuario ${userId} de ${u.usu_estado} a ${newState}`);
+          return {...u, usu_estado: newState};
+        }
+        return u;
+      });
+    });
+    
+    // Actualizar lista filtrada también
+    setFilteredUsers(prevUsers => {
+      return prevUsers.map(u => {
+        if (u.usu_id === userId) {
+          const newState = u.usu_estado === 1 ? 0 : 1;
+          return {...u, usu_estado: newState};
+        }
+        return u;
+      });
+    });
+    
+  } catch (error) {
+    console.error('Error al cambiar estado:', error);
+    setError('Error al cambiar el estado del usuario. Intente nuevamente.');
+  } finally {
+    setActionLoading(false);
+  }
+};
   
   // Función para obtener las clases de estilo según el estado
   const getStatusStyles = (status) => {
@@ -45,9 +104,74 @@ const UsersList = () => {
     }
   };
   
+  // Función para cargar los usuarios desde la API
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Verificar si hay token disponible
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No hay token de autenticación disponible');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Fetching users with token:', token.substring(0, 10) + '...');
+      
+      const response = await api.get('/usuario_traertodos.php');
+      console.log('API response:', response);
+      
+      if (response.data) {
+        // Verificar si la respuesta tiene un formato esperado
+        if (Array.isArray(response.data)) {
+          console.log('Usuarios obtenidos:', response.data.length);
+          setUsers(response.data);
+        } else if (response.data.usuarios && Array.isArray(response.data.usuarios)) {
+          // Algunas APIs devuelven los datos en un objeto con una propiedad
+          console.log('Usuarios obtenidos (desde propiedad usuarios):', response.data.usuarios.length);
+          setUsers(response.data.usuarios);
+        } else {
+          console.error('Formato de respuesta inesperado:', response.data);
+          setError('El formato de la respuesta de la API no es el esperado');
+          setUsers([]);
+        }
+      } else {
+        console.error('No se recibieron datos de la API');
+        setError('No se recibieron datos de la API');
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error al obtener los usuarios:', error);
+      if (error.response) {
+        console.error('Detalles del error:', error.response.status, error.response.data);
+        if (error.response.status === 401) {
+          setError('Error de autenticación: Token inválido o expirado');
+        } else {
+          setError(`Error al obtener usuarios: ${error.response.status} - ${error.response.statusText}`);
+        }
+      } else if (error.request) {
+        setError('No se pudo conectar con el servidor. Verifique su conexión a internet.');
+      } else {
+        setError(`Error inesperado: ${error.message}`);
+      }
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Cargar los usuarios cuando el componente se monta
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+  
   // Efecto para actualizar usuarios filtrados cuando cambian los usuarios
   useEffect(() => {
-    applyFilter(filterBy);
+    if (users.length > 0) {
+      applyFilter(filterBy);
+    }
   }, [users, filterBy]);
 
   // Funciones para manejar acciones
@@ -71,50 +195,203 @@ const UsersList = () => {
     setSelectedUser(user);
     setDeleteModalOpen(true);
   };
+
+  // Nueva función para inactivar/activar usuario
+  // Función modificada para el cambio de estado
+const handleToggleStatus = async (user, event) => {
+  // Importante: detener la propagación del evento para que no afecte a otros handlers
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   
-  const handleSaveUser = (userData) => {
-    if (editModalOpen && selectedUser) {
-      // Actualizar usuario existente
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user === selectedUser ? userData : user
-        )
-      );
-      setEditModalOpen(false);
-    } else {
-      // Crear nuevo usuario
-      setUsers(prevUsers => [...prevUsers, userData]);
-      setCreateUserModalOpen(false);
+  try {
+    setActionLoading(true);
+    
+    // Llamar a la API para cambiar estado
+    const response = await api.post('/usuario_inactivar.php', {
+      usu_id: user.usu_id
+    });
+    
+    console.log('Respuesta de inactivación:', response);
+    
+    // Actualizar estado local inmediatamente
+    setUsers(prevUsers => 
+      prevUsers.map(u => {
+        if (u.usu_id === user.usu_id) {
+          return {...u, usu_estado: u.usu_estado === 1 ? 0 : 1};
+        }
+        return u;
+      })
+    );
+    
+  } catch (error) {
+    console.error('Error al cambiar estado:', error);
+    setError(error.response?.data?.message || "Error al cambiar el estado");
+  } finally {
+    setActionLoading(false);
+  }
+};
+
+  // Función para generar una contraseña aleatoria
+  const generateRandomPassword = (length = 8) => {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
     }
-    setSelectedUser(null);
+    return password;
   };
   
-  const handleConfirmDelete = () => {
+  const handleSaveUser = async (userData) => {
+    try {
+      console.log('userData recibido:', userData);
+      
+      // Generar contraseña automáticamente solo para nuevos usuarios
+      const randomPassword = !editModalOpen ? generateRandomPassword(10) : null;
+      
+      // Transformar los datos del formulario al formato que espera la API
+      const apiData = {
+        usu_nombre: userData.name,
+        usu_documento: userData.code,
+        usu_correo: userData.email,
+        usu_telefono: userData.phone,
+        usu_rol: userData.type,
+        // usu_estado: userData.status ? (String(userData.status).toLowerCase() === 'activo' ? 1 : 0) : 0
+      };
+      
+      // Añadir password solo para usuarios nuevos
+      if (randomPassword) {
+        apiData.usu_password = randomPassword;
+      }
+      
+      console.log('Enviando datos a API:', apiData);
+      
+      if (editModalOpen && selectedUser) {
+        // Añadir el ID del usuario para la actualización
+        apiData.usu_id = selectedUser.usu_id;
+        apiData.usu_estado = selectedUser.usu_estado;
+        
+        console.log('Actualizando usuario con ID:', selectedUser.usu_id);
+        
+        try {
+          // Actualizar usuario existente
+          const response = await api.put(`/usuario_modificar.php`, apiData);
+          console.log('Respuesta de actualización:', response);
+          
+          await fetchUsers();
+          setEditModalOpen(false);
+          return { error: false };
+        } catch (updateError) {
+          console.error('Error al actualizar usuario:', updateError);
+          
+          // Detectar error de duplicación
+          if (updateError.response && updateError.response.status === 409) {
+            return { 
+              error: true, 
+              message: "Ya existe un usuario con este correo o número de documento" 
+            };
+          }
+          
+          // Otros errores de la API
+          if (updateError.response && updateError.response.data && updateError.response.data.message) {
+            return { error: true, message: updateError.response.data.message };
+          }
+          
+          throw updateError; // Relanzar para que lo capture el bloque catch general
+        }
+      } else {
+        // Lógica para crear un nuevo usuario (sin cambios)
+        const response = await api.post('/usuario_insertar.php', apiData);
+        console.log('Respuesta de creación:', response);
+        
+        // Guardar la contraseña y mostrar modal
+        setGeneratedPassword(randomPassword);
+        setCreateUserModalOpen(false);
+        setPasswordModalOpen(true);
+        
+        await fetchUsers();
+        return { error: false };
+      }
+    } catch (error) {
+      console.error('Error al guardar usuario:', error);
+      
+      // Extraer el mensaje de error
+      let errorMessage = "Error al guardar el usuario";
+      
+      if (error.response) {
+        console.error('Detalles del error:', error.response.status, error.response.data);
+        
+        // Respuesta específica para errores comunes
+        if (error.response.status === 409) {
+          errorMessage = "Ya existe un usuario con este correo o número de documento";
+        } else if (error.response.status === 400) {
+          errorMessage = "Datos de usuario inválidos";
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return { error: true, message: errorMessage };
+    } finally {
+      // Si ocurre un error grave, asegurarse de limpiar
+      if (!editModalOpen) {
+        setSelectedUser(null);
+      }
+    }
+  };
+  
+  const handleConfirmDelete = async () => {
     if (selectedUser) {
-      setUsers(prevUsers => 
-        prevUsers.filter(user => user !== selectedUser)
-      );
-      setDeleteModalOpen(false);
-      setSelectedUser(null);
+      try {
+        await api.delete(`/ruta_eliminacion_usuario.php?id=${selectedUser.id}`); // Ajusta la ruta según tu API
+        // Recargar los usuarios después de eliminar
+        await fetchUsers();
+        setDeleteModalOpen(false);
+        setSelectedUser(null);
+      } catch (error) {
+        console.error('Error al eliminar usuario:', error);
+        // Aquí podrías manejar errores o mostrar notificaciones
+      }
     }
   };
   
   // Función para aplicar filtro
   const applyFilter = (filterValue) => {
+    if (!Array.isArray(users) || users.length === 0) {
+      setFilteredUsers([]);
+      return;
+    }
+    
     setFilterBy(filterValue);
     setFilterOpen(false);
     
     if (!filterValue) {
-      setFilteredUsers(users);
+      setFilteredUsers([...users]);
       return;
     }
     
     if (filterValue.startsWith('status-')) {
       const statusValue = filterValue.replace('status-', '');
-      setFilteredUsers(users.filter(user => user.status === statusValue));
+      const isActive = statusValue === 'Activo';
+      
+      setFilteredUsers(users.filter(user => {
+        const userIsActive = user.usu_estado === 1 || user.usu_estado === '1';
+        return (isActive && userIsActive) || (!isActive && !userIsActive);
+      }));
     } else {
-      setFilteredUsers(users.filter(user => user.type === filterValue));
+      setFilteredUsers(users.filter(user => user.usu_rol === filterValue));
     }
+  };
+  
+  // Función para recargar los datos
+  const handleRefresh = () => {
+    fetchUsers();
   };
   
   // Función para cerrar el dropdown cuando se hace clic fuera
@@ -142,7 +419,9 @@ const UsersList = () => {
       </div>
       
       <div className="flex justify-between items-center mb-6">
-        <div className="flex-grow"></div>
+        <div className="flex-grow">
+          {error && <p className="text-red-500 text-sm">{error} <button onClick={handleRefresh} className="text-blue-500 ml-2 underline">Reintentar</button></p>}
+        </div>
         <div className="flex space-x-3">
           <div className="relative" ref={filterRef}>
             <button 
@@ -187,37 +466,104 @@ const UsersList = () => {
                   <th className="py-3 px-4 text-left font-medium tracking-wider w-28">Teléfono</th>
                   <th className="py-3 px-4 text-left font-medium tracking-wider w-36">Tipo de Usuario</th>
                   <th className="py-3 px-4 text-center font-medium tracking-wider w-24">Estado</th>
-                  <th className="py-3 px-4 text-center font-medium tracking-wider w-28">Acciones</th>
+                  <th className="py-3 px-4 text-center font-medium tracking-wider w-36">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user, index) => (
-                  <tr key={index} className="border-t border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-left text-sm text-gray-500 w-32">{user.code}</td>
-                    <td className="py-3 px-4 text-left text-sm font-medium text-gray-900 w-48">{user.name}</td>
-                    <td className="py-3 px-4 text-left text-sm text-blue-500 w-56">{user.email}</td>
-                    <td className="py-3 px-4 text-left text-sm text-gray-500 w-28">{user.phone}</td>
-                    <td className="py-3 px-4 text-left text-sm text-gray-600 w-36">{user.type}</td>
-                    <td className="py-3 px-4 text-center w-24">
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusStyles(user.status)}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-6 w-28 text-center">
-                      <div className="flex justify-center space-x-4">
-                        <button onClick={() => handleEdit(user)} className="text-green-400 hover:text-blue-700">
-                          <Edit className="h-5 w-5" />
-                        </button>
-                        <button onClick={() => handleView(user)} className="text-blue-400 hover:text-blue-600">
-                          <Eye className="h-5 w-5" />
-                        </button>
-                        <button onClick={() => handleDelete(user)} className="text-red-500 hover:text-red-700">
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="py-4 text-center">
+                      Cargando usuarios...
                     </td>
                   </tr>
-                ))}
+                ) : filteredUsers.length > 0 ? (
+                  filteredUsers.map((user, index) => (
+                    <tr key={index} className="border-t border-gray-200 hover:bg-gray-50">
+                      <td className="py-3 px-4 text-left text-sm text-gray-500 w-32">{user.usu_documento || ''}</td>
+                      <td className="py-3 px-4 text-left text-sm font-medium text-gray-900 w-48">{user.usu_nombre || ''}</td>
+                      <td className="py-3 px-4 text-left text-sm text-blue-500 w-56">{user.usu_correo || ''}</td>
+                      <td className="py-3 px-4 text-left text-sm text-gray-500 w-28">{user.usu_telefono || ''}</td>
+                      <td className="py-3 px-4 text-left text-sm text-gray-600 w-36">{user.usu_rol || ''}</td>
+                      <td className="py-3 px-4 text-center w-24">
+                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusStyles(user.usu_estado === 1 ? 'Activo' : 'Inactivo')}`}>
+                          {user.usu_estado === 1 ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      
+
+<td className="py-3 px-4 w-36 text-center">
+  <div className="flex justify-center space-x-3">
+
+  <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleToggleStatusSafe(user);
+      }} 
+      className={`${user.usu_estado === 1 ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
+      disabled={actionLoading}
+      title={user.usu_estado === 1 ? "Inactivar usuario" : "Activar usuario"}
+    >
+      {user.usu_estado === 1 ? 
+        <ToggleLeft className="h-4 w-4" /> : 
+        <ToggleRight className="h-4 w-4" />
+      }
+    </button>
+    {/* Botón de Editar */}
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleEdit(user);
+      }} 
+      className="text-green-400 hover:text-green-700" 
+      title="Editar usuario"
+    >
+      <Edit className="h-4 w-4" />
+    </button>
+    
+    {/* Botón de Ver */}
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleView(user);
+      }} 
+      className="text-blue-400 hover:text-blue-600"
+      title="Ver detalles"
+    >
+      <Eye className="h-4 w-4" />
+    </button>
+    
+    {/* Botón de Eliminar */}
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleDelete(user);
+      }} 
+      className="text-red-500 hover:text-red-700"
+      title="Eliminar usuario"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+    
+    
+  </div>
+</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="py-4 text-center">
+                      {error ? 'Error al cargar usuarios' : 'No se encontraron usuarios.'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -232,11 +578,12 @@ const UsersList = () => {
       />
       
       <EditUserModal 
-        isOpen={editModalOpen} 
-        onClose={() => setEditModalOpen(false)} 
-        user={selectedUser}
-        onSave={handleSaveUser}
-      />
+  isOpen={editModalOpen} 
+  onClose={() => setEditModalOpen(false)} 
+  user={selectedUser}
+  onSave={handleSaveUser}
+  onToggleStatus={handleToggleStatusSafe} // Usar la función segura
+/>
       
       <DeleteUserModal 
         isOpen={deleteModalOpen} 
@@ -245,13 +592,22 @@ const UsersList = () => {
         onConfirm={handleConfirmDelete}
       />
       
-      <CreateUserModal 
+      <CreateUserModal
         isOpen={createUserModalOpen}
         onClose={() => setCreateUserModalOpen(false)}
-        onSave={handleSaveUser}
+        onSave={async (userData) => {
+          const result = await handleSaveUser(userData);
+          return result;
+        }}
+      />
+  
+      <PasswordModal 
+        isOpen={passwordModalOpen} 
+        onClose={() => setPasswordModalOpen(false)} 
+        password={generatedPassword}
       />
     </div>
   );
-};
+}
 
-export default UsersList;
+export default UsersList

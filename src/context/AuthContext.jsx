@@ -25,12 +25,26 @@ export const AuthProvider = ({ children }) => {
         // Verificar si el token ha expirado
         if (Date.now() < parseInt(expiration)) {
           setIsAuthenticated(true);
-          setUser({ email: localStorage.getItem('userEmail') || 'correo@example.com', token });
+          
+          // Intentar recuperar todos los datos del usuario del localStorage
+          try {
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            if (userData) {
+              setUser({...userData, token});
+            } else {
+              // Si no hay datos completos, usar al menos el email
+              setUser({ email: localStorage.getItem('userEmail') || 'correo@example.com', token });
+            }
+          } catch (error) {
+            console.error('Error al parsear datos del usuario:', error);
+            setUser({ email: localStorage.getItem('userEmail') || 'correo@example.com', token });
+          }
         } else {
           // Si el token ha expirado, limpiamos el almacenamiento
           localStorage.removeItem('token');
           localStorage.removeItem('tokenExpiration');
           localStorage.removeItem('userEmail');
+          localStorage.removeItem('userData');
           setIsAuthenticated(false);
           setUser(null);
         }
@@ -49,12 +63,23 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     const expiration = Date.now() + SESSION_EXPIRATION_TIME;
     
+    // Guardar el token y la expiración
     localStorage.setItem('token', userData.token); 
     localStorage.setItem('tokenExpiration', expiration.toString());
-    localStorage.setItem('userEmail', userData.email);
     
+    // Guardar el email por compatibilidad
+    if (userData.email || userData.usu_correo) {
+      localStorage.setItem('userEmail', userData.email || userData.usu_correo);
+    }
+    
+    // Guardar todos los datos del usuario
+    const userToStore = {...userData};
+    delete userToStore.token; // No guardamos el token duplicado
+    localStorage.setItem('userData', JSON.stringify(userToStore));
+    
+    // Actualizar estado
     setIsAuthenticated(true);
-    setUser(userData);
+    setUser({...userData});
     
     // Configurar temporizador para cerrar sesión automáticamente cuando expire
     setTimeout(() => {
@@ -67,6 +92,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('tokenExpiration');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userData');
     
     setIsAuthenticated(false);
     setUser(null);

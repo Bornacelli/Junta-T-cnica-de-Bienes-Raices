@@ -11,7 +11,7 @@ export const setLogoutFunction = (logoutFn) => {
 
 // Crear una instancia de axios con la URL base
 const api = axios.create({
-  baseURL: 'https://tu-api.com/api', // Cambia esta URL por la de tu API
+  baseURL: 'https://validador.htc-pa.com', // Cambia esta URL por la de tu API
   headers: {
     'Content-Type': 'application/json'
   }
