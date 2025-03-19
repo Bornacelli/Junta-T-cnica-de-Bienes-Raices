@@ -8,7 +8,7 @@ import Login from '../auth/Login';
 import ForgotPassword from '../auth/ForgotPassword';
 import ResetPassword from '../auth/ResetPassword';
 import Dashboard from '../pages/Dashboard/Dashboard';
-import Layout from '../components/layout/layout';
+import Layout from '../components/layout/Layout'
 import NotificationsPage from '../components/layout/topbar/NotificationsPage';
 import Validador from '../pages/validador/Validador';
 import Usuarios from '../pages/configuracion/usuarios/Usuarios';
