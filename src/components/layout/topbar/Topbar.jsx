@@ -16,30 +16,41 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Obtener datos del usuario cuando el componente se monta
+  // In Topbar.jsx, update your useEffect hook
   useEffect(() => {
     console.log('useEffect se está ejecutando');
-
+  
     const fetchUserData = async () => {
       const token = localStorage.getItem('token');
-
+      const userId = localStorage.getItem('userId');
+  
       console.log('🔍 Token desde localStorage:', token);
-
+      console.log('🔍 User ID desde localStorage:', userId);
+  
       if (!token) {
         console.warn('No se encontró el token en localStorage');
         setLoading(false);
         return;
       }
-
+  
+      if (!userId) {
+        console.warn('No se encontró el ID de usuario en localStorage');
+        setUserDisplayName('Usuario');
+        setLoading(false);
+        return;
+      }
+  
       try {
         console.log('==== INICIANDO FETCH DE USUARIO ====');
-
-        // Hacer la petición
-        const response = await api.get(`/usuario_traer.php?id=1`, {
+        console.log('Realizando petición con ID:', userId);
+  
+        // Hacer la petición usando el ID dinámico
+        const response = await api.get(`/usuario_traer.php?id=${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
+  
         console.log('📩 Respuesta completa de la API:', response);
-
+  
         if (response.data && response.data.usu_nombre) {
           console.log('✅ Datos recibidos:', response.data);
           setUserDisplayName(response.data.usu_nombre);
@@ -54,7 +65,7 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
         setLoading(false);
       }
     };
-
+  
     fetchUserData();
   }, []);
 
@@ -97,7 +108,7 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
       </button>
 
       <div className="flex flex-col">
-        <h1 className="text-xl font-semibold text-gray-800">Junta Técnica de Bienes Raíces</h1>
+        <h1 className="text-xl font-semibold text-gray-800">Demo</h1>
         <p className="text-sm text-gray-500">{formatDate(currentDate)}</p>
       </div>
 

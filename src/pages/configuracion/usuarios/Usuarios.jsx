@@ -37,9 +37,8 @@ const UsersList = () => {
     { label: 'Inactivo', value: 'status-Inactivo' }
   ];
 
-  // Agrega esta nueva función en UsersList, separada de las otras funciones de manejo
 
-// Función segura y aislada para cambiar estado
+// endpoints separados
 const handleToggleStatusSafe = async (userToToggle) => {
   if (!userToToggle || !userToToggle.usu_id) {
     console.error('Error: No se proporcionó usuario válido para toggle');
@@ -51,15 +50,21 @@ const handleToggleStatusSafe = async (userToToggle) => {
     
     // Guarda el ID del usuario de forma segura
     const userId = userToToggle.usu_id;
+    const isCurrentlyActive = userToToggle.usu_estado === 1;
     
-    console.log('Cambiando estado del usuario con ID:', userId);
+    console.log(`${isCurrentlyActive ? 'Inactivando' : 'Activando'} usuario con ID:`, userId);
     
-    // Llamar a la API para cambiar estado
-    const response = await api.post('/usuario_inactivar.php', {
+    // Determinar qué endpoint usar basado en el estado actual
+    const endpoint = isCurrentlyActive 
+      ? '/usuario_inactivar.php'  // Si está activo, lo inactivamos
+      : '/usuario_activar.php';   // Si está inactivo, lo activamos
+    
+    // Llamar a la API correspondiente
+    const response = await api.post(endpoint, {
       usu_id: userId
     });
     
-    console.log('Respuesta de inactivación:', response);
+    console.log(`Respuesta de ${isCurrentlyActive ? 'inactivación' : 'activación'}:`, response);
     
     // Actualizar estado local de forma segura
     setUsers(prevUsers => {
@@ -494,22 +499,7 @@ const handleToggleStatus = async (user, event) => {
 <td className="py-3 px-4 w-36 text-center">
   <div className="flex justify-center space-x-3">
 
-  <button 
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        handleToggleStatusSafe(user);
-      }} 
-      className={`${user.usu_estado === 1 ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
-      disabled={actionLoading}
-      title={user.usu_estado === 1 ? "Inactivar usuario" : "Activar usuario"}
-    >
-      {user.usu_estado === 1 ? 
-        <ToggleLeft className="h-4 w-4" /> : 
-        <ToggleRight className="h-4 w-4" />
-      }
-    </button>
+  
     {/* Botón de Editar */}
     <button 
       type="button"
@@ -537,9 +527,27 @@ const handleToggleStatus = async (user, event) => {
     >
       <Eye className="h-4 w-4" />
     </button>
+
+      {/* Botón cambiar estado */}
+    <button 
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        handleToggleStatusSafe(user);
+      }} 
+      className={`${user.usu_estado === 1 ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}
+      disabled={actionLoading}
+      title={user.usu_estado === 1 ? "Inactivar usuario" : "Activar usuario"}
+    >
+      {user.usu_estado === 1 ? 
+        <ToggleLeft className="h-4 w-4" /> : 
+        <ToggleRight className="h-4 w-4" />
+      }
+    </button>
     
     {/* Botón de Eliminar */}
-    <button 
+    {/* <button 
       type="button"
       onClick={(e) => {
         e.stopPropagation();
@@ -550,7 +558,7 @@ const handleToggleStatus = async (user, event) => {
       title="Eliminar usuario"
     >
       <Trash2 className="h-4 w-4" />
-    </button>
+    </button> */}
     
     
   </div>

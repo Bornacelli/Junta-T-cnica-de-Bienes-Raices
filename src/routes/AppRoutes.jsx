@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { setLogoutFunction } from '../services/ApiService';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { NotificationProvider } from '../context/NotificationContext';
+import ValidadorPage from '../pages/inicio/ValidadorPage';
 import Login from '../auth/Login';
 import ForgotPassword from '../auth/ForgotPassword';
 import ResetPassword from '../auth/ResetPassword';
@@ -33,14 +34,11 @@ function AppRoutes() {
     <AuthProvider>
       <NotificationProvider>
         <BrowserRouter>
-          {/* 
-            Necesitamos renderizar ApiConfigSetup dentro del BrowserRouter
-            porque useAuth sólo funciona dentro del AuthProvider
-          */}
           <ApiConfigSetup />
           
           <Routes>
             {/* Pantalla de login */}
+            <Route path="/validadorpage" element={<ValidadorPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -57,6 +55,9 @@ function AppRoutes() {
               </Route>
             </Route>
             
+            
+            <Route path="/" element={<Navigate to="/validadorpage" replace />} />
+
             {/* Redirige la raíz al login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             

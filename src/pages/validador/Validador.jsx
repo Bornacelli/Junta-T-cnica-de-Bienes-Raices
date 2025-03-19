@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { SearchCheck, CircleCheck, AlertTriangle, XCircle, CalendarArrowDown, CalendarArrowUp, Scale, User } from 'lucide-react';
+import api from '../../services/ApiService'; // Importamos el servicio API que has definido
 
 const Validador = () => {
   const [licencia, setLicencia] = useState('');
-  const [estado, setEstado] = useState(null); // Puede ser: 'validada', 'suspendida', 'cancelada', 'noEncontrada' o null (cuando no hay resultado)
+  const [estado, setEstado] = useState(null);
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [datosFicticios, setDatosFicticios] = useState({
     personaJuridica: '',
@@ -11,44 +12,94 @@ const Validador = () => {
     fechaEmision: '',
     fechaVencimiento: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     setLicencia(e.target.value);
-    // No cambiamos mostrarResultado aquí para que no desaparezca el resultado al escribir
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulamos diferentes resultados según el número de licencia ingresado
-    if (licencia === '222') {
-      setEstado('validada');
-      setDatosFicticios({
-        personaJuridica: 'Inversiones Natasha, S.A.',
-        representanteLegal: 'Natasha Sucre',
-        fechaEmision: '18/12/2020',
-        fechaVencimiento: '18/12/2025'
-      });
-    } else if (licencia === '333') {
-      setEstado('suspendida');
-      setDatosFicticios({
-        personaJuridica: 'Comercial Panamá, S.A.',
-        representanteLegal: 'Carlos Mendoza',
-        fechaEmision: '05/06/2021',
-        fechaVencimiento: '05/06/2026'
-      });
-    } else if (licencia === '444') {
-      setEstado('cancelada');
-      setDatosFicticios({
-        personaJuridica: 'Distribuidora Central, S.A.',
-        representanteLegal: 'Luis Gómez',
-        fechaEmision: '10/01/2019',
-        fechaVencimiento: '10/01/2024'
-      });
-    } else {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Usar la ruta correcta según el error (corredores_traer.php)
+      const response = await api.get(`/corredores_traer.php?no_lic=${licencia}`);
+      const data = response.data;
+      
+      console.log("Respuesta de API:", data); // Para depuración
+      
+      // Procesamos la respuesta de la API basada en el formato JSON real
+      if (data && data.id) {
+        // Modificación: Si no hay estatus_licencia o está vacío, por defecto será "ACTIVA"
+        const estatusLicencia = data.estatus_licencia ? data.estatus_licencia.toUpperCase() : 'ACTIVA';
+        
+        // Mapeamos el estado según el campo "estatus_licencia"
+        let estadoMapeado;
+        switch (estatusLicencia) {
+          case 'SUSPENDIDA':
+            estadoMapeado = 'suspendida';
+            break;
+          case 'CANCELADA':
+            estadoMapeado = 'cancelada';
+            break;
+          case 'ACTIVA':
+          default:
+            // Por defecto o cuando explícitamente sea "ACTIVA"
+            estadoMapeado = 'validada';
+            break;
+        }
+        
+        setEstado(estadoMapeado);
+        
+        // Procesamos las fechas para asegurar un formato consistente
+        const formatearFecha = (fechaStr) => {
+          if (!fechaStr || fechaStr === '0000-00-00') return 'No disponible';
+          
+          // Convertir formato YYYY-MM-DD a DD/MM/YYYY
+          try {
+            const [year, month, day] = fechaStr.split('-');
+            if (year === '0000') return 'No disponible';
+            return `${day}/${month}/${year}`;
+          } catch (e) {
+            return fechaStr; // Si hay error, devolvemos el string original
+          }
+        };
+        
+        setDatosFicticios({
+          personaJuridica: data.listado_persona_juridica || 'No disponible',
+          representanteLegal: data.representante_legal || 'No disponible',
+          fechaEmision: formatearFecha(data.emision),
+          fechaVencimiento: formatearFecha(data.vencimiento)
+        });
+      } else {
+        setEstado('noEncontrada');
+        setDatosFicticios({});
+      }
+    } catch (err) {
+      console.error('Error al validar la licencia:', err);
+      
+      // Proporcionar un mensaje más específico basado en el error
+      if (err.response) {
+        if (err.response.status === 404) {
+          setError('');
+        } else {
+          setError(`Error del servidor: ${err.response.status}. Por favor, intente nuevamente.`);
+        }
+      } else if (err.request) {
+        setError('No se pudo conectar con el servidor. Verifique su conexión a internet.');
+      } else {
+        setError('Ocurrió un error al validar la licencia. Por favor, intente nuevamente.');
+      }
+      
       setEstado('noEncontrada');
       setDatosFicticios({});
+    } finally {
+      setLoading(false);
+      setMostrarResultado(true);
     }
-    setMostrarResultado(true);
   };
 
   // Configuración para los diferentes estados
@@ -103,20 +154,31 @@ const Validador = () => {
               value={licencia}
               onChange={handleChange}
               placeholder="Ingrese el número de licencia"
+              disabled={loading}
             />
           </div>
           
           <div className="mx-4 my-4">
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors duration-200"
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors duration-200 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
-              Validar
+              {loading ? 'Validando...' : 'Validar'}
             </button>
           </div>
         </form>
         
-        {mostrarResultado && estado && (
+        {error && (
+          <div className="mx-4 mt-4 p-4 rounded-lg bg-red-50">
+            <div className="flex items-center">
+              <XCircle className="text-red-600" size={20} />
+              <span className="ml-2 text-red-800">{error}</span>
+            </div>
+          </div>
+        )}
+        
+        {mostrarResultado && estado && !error && (
         <div className={`mx-4 mt-4 p-4 rounded-lg ${estadoConfig[estado].bgColor} ${estadoConfig[estado].borderColor}`}>
             <div className="flex items-center mb-4">
             {estadoConfig[estado].icon}

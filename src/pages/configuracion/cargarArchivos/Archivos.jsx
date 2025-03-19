@@ -1,13 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Calendar, Upload, X, FileText, File, CheckCircle } from 'lucide-react';
+import { Calendar, Upload, X, File, CheckCircle, AlertCircle } from 'lucide-react';
+import api from '../../../services/ApiService';
 
-const ContenidoCargaArchivos = () => {
-  const [fecha, setFecha] = useState('06/02/2025');
+function ContenidoCargaArchivos() {
+  const [fecha, setFecha] = useState(() => {
+    const today = new Date();
+    return `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState(null);
   const [showNotification, setShowNotification] = useState(false);
+  const [notificationType, setNotificationType] = useState('success'); // 'success' o 'error'
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const datePickerRef = useRef(null);
   const inputRef = useRef(null);
@@ -64,30 +70,43 @@ const ContenidoCargaArchivos = () => {
     }
   };
   
+  const validateFile = (file) => {
+    // Verificar que sea un archivo Excel
+    const validTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    
+    if (!validTypes.includes(file.type)) {
+      showErrorNotification('El archivo debe ser un documento Excel (.xls o .xlsx)');
+      return false;
+    }
+    
+    // Verificar tamaño del archivo (por ejemplo, máximo 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+    if (file.size > maxSize) {
+      showErrorNotification('El archivo excede el tamaño máximo permitido (10MB)');
+      return false;
+    }
+    
+    return true;
+  };
+  
   const handleFile = (file) => {
+    // Validar que sea un archivo Excel
+    if (!validateFile(file)) {
+      return;
+    }
+    
     setFile(file);
     
     // Crear previsualización según el tipo de archivo
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview({
-          type: 'image',
-          url: e.target.result
-        });
-      };
-      reader.readAsDataURL(file);
-    } else if (file.type === 'application/pdf') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview({
-          type: 'pdf',
-          url: e.target.result
-        });
-      };
-      reader.readAsDataURL(file);
+    if (file.type === 'application/vnd.ms-excel' || 
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      setPreview({
+        type: 'generic',
+        name: file.name,
+        extension: file.name.split('.').pop()
+      });
     } else {
-      // Para otros tipos de archivos, mostrar un icono genérico
+      // Para otros tipos de archivos (no deberían llegar aquí debido a la validación)
       setPreview({
         type: 'generic',
         name: file.name,
@@ -96,40 +115,157 @@ const ContenidoCargaArchivos = () => {
     }
   };
   
-  // Función para manejar la carga del archivo
-  const handleUpload = () => {
-    // Guardar temporalmente el nombre del archivo antes de limpiarlo
-    const uploadedFileName = file ? file.name : "Archivo";
+  // Función para mostrar notificación de éxito
+  const showSuccessNotification = (message) => {
+    setNotificationType('success');
+    setNotificationMessage(message);
+    setShowNotification(true);
+  };
+  
+  // Función para mostrar notificación de error
+  const showErrorNotification = (message) => {
+    setNotificationType('error');
+    setNotificationMessage(message);
+    setShowNotification(true);
+  };
+  
+  // Función para convertir fecha de DD/MM/YYYY a formato ISO (YYYY-MM-DD)
+  const convertDateFormat = (dateString) => {
+    const [day, month, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
+  };
+
+// Validar si la fecha ingresada es válida (formato DD/MM/YYYY) y no es futura
+const isValidDate = (dateString) => {
+  const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  if (!regex.test(dateString)) return false;
+  
+  const [, day, month, year] = dateString.match(regex);
+  const dayNum = parseInt(day, 10);
+  const monthNum = parseInt(month, 10);
+  const yearNum = parseInt(year, 10);
+  
+  // Verificar rangos
+  if (monthNum < 1 || monthNum > 12) return false;
+  
+  const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+  if (dayNum < 1 || dayNum > daysInMonth) return false;
+  
+  // Verificar años razonables (entre 2000 y 2100)
+  if (yearNum < 2000 || yearNum > 2100) return false;
+  
+  // Verificar que la fecha no sea futura
+  const inputDate = new Date(yearNum, monthNum - 1, dayNum);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Resetear la hora para comparar solo fechas
+  
+  if (inputDate > today) return false;
+  
+  return true;
+};
+
+// Función para formatear cualquier fecha en DD/MM/YYYY
+const formatDateString = (dateString) => {
+  if (!dateString) return '';
+  
+  // Si ya es una fecha en formato DD/MM/YYYY, devolverla formateada
+  const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  if (regex.test(dateString)) {
+    const [, day, month, year] = dateString.match(regex);
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+  
+  // Intentar parsear como fecha
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  
+  return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+};
+
+// Modificar el handleChange para la fecha:
+const handleDateChange = (e) => {
+  const input = e.target.value;
+  setFecha(input);
+  
+  // Si la fecha es válida, actualizar el calendario
+  if (isValidDate(input)) {
+    const [day, month, year] = input.split('/').map(num => parseInt(num, 10));
+    setCurrentMonth(month);
+    setCurrentYear(year);
+  }
+};
+
+useEffect(() => {
+  if (isValidDate(fecha)) {
+    const [day, month, year] = fecha.split('/').map(num => parseInt(num, 10));
+    setCurrentMonth(month);
+    setCurrentYear(year);
+  }
+}, [fecha]);
+  
+  // Función para manejar la carga del archivo a la API
+  const handleUpload = async () => {
+    if (!file) return;
     
     setIsLoading(true);
-    console.log('Archivo a cargar:', file);
-    console.log('Fecha seleccionada:', fecha);
     
-    // Simular la carga del archivo con un temporizador
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Crear un FormData para enviar el archivo
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('actualizado_hasta', convertDateFormat(fecha));
+      
+      // Enviar a la API
+      const response = await api.post('/corredores_cargar_excel.php', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      // Procesar respuesta exitosa
+      console.log('Respuesta de la API:', response.data);
+      showSuccessNotification(`Archivo "${file.name}" cargado exitosamente.`);
+      
       // Limpiar el archivo y la previsualización
       setFile(null);
       setPreview(null);
-      // Mostrar la notificación con el nombre del archivo que se cargó
-      setShowNotification(uploadedFileName);
-    }, 1500); // Simular una carga de 1.5 segundos
+      
+    } catch (error) {
+      console.error('Error al cargar el archivo:', error);
+      
+      // Mostrar mensaje de error específico si viene de la API
+      if (error.response && error.response.data && error.response.data.message) {
+        showErrorNotification(error.response.data.message);
+      } else {
+        showErrorNotification('Error al cargar el archivo. Por favor intente nuevamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Generar días del mes actual
-  const generateDays = () => {
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-    
-    // Ajustar para que la semana comience el lunes (0 = lunes, 6 = domingo)
-    const firstDayAdjusted = firstDay === 0 ? 6 : firstDay - 1;
-    
-    // Crear array con días vacíos para alinear el calendario
-    const emptyDays = Array(firstDayAdjusted).fill(null);
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    
-    return [...emptyDays, ...days];
-  };
+
+ // Generar días del mes actual
+const generateDays = () => {
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+  
+  // Ajustar para que la semana comience el lunes (0 = lunes, 6 = domingo)
+  const firstDayAdjusted = firstDay === 0 ? 6 : firstDay - 1;
+  
+  // Crear array con días vacíos para alinear el calendario
+  const emptyDays = Array(firstDayAdjusted).fill(null);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  
+  return [...emptyDays, ...days];
+};
+
+// Verificar si una fecha es futura
+const isFutureDate = (day) => {
+  const today = new Date();
+  const checkDate = new Date(currentYear, currentMonth - 1, day);
+  return checkDate > today;
+};
 
   // Formatear fecha seleccionada
   const formatDate = (day) => {
@@ -168,17 +304,27 @@ const ContenidoCargaArchivos = () => {
   const Notification = () => {
     if (!showNotification) return null;
     
+    const isSuccess = notificationType === 'success';
+    
     return (
-      <div className="fixed top-5 right-0 flex items-center p-4 mb-4 text-green-800 rounded-lg bg-green-50 shadow-lg z-50" role="alert">
-        <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg">
-          <CheckCircle size={20} />
+      <div className={`fixed top-5 right-0 flex items-center p-4 mb-4 rounded-lg shadow-lg z-50 ${
+        isSuccess ? 'text-green-800 bg-green-50' : 'text-red-800 bg-red-50'
+      }`} role="alert">
+        <div className={`inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg ${
+          isSuccess ? 'text-green-500 bg-green-100' : 'text-red-500 bg-red-100'
+        }`}>
+          {isSuccess ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
         </div>
         <div className="ml-3 text-sm font-medium mr-10">
-          Archivo "{typeof showNotification === 'string' ? showNotification : 'seleccionado'}" cargado exitosamente.
+          {notificationMessage}
         </div>
         <button 
           type="button" 
-          className="ml-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8"
+          className={`ml-auto -mx-1.5 -my-1.5 rounded-lg focus:ring-2 p-1.5 inline-flex items-center justify-center h-8 w-8 ${
+            isSuccess 
+              ? 'bg-green-50 text-green-500 focus:ring-green-400 hover:bg-green-200' 
+              : 'bg-red-50 text-red-500 focus:ring-red-400 hover:bg-red-200'
+          }`}
           onClick={() => setShowNotification(false)}
         >
           <X size={16} />
@@ -214,10 +360,14 @@ const ContenidoCargaArchivos = () => {
              <p className="text-gray-500 text-center">
                Haga clic para agregar <span className="text-gray-400">o arrastre y suelte</span>
              </p>
+             <p className="text-gray-400 text-sm mt-2">
+               Solo archivos Excel (.xls, .xlsx)
+             </p>
              <input 
                type="file" 
                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                onChange={handleFileChange}
+               accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
              />
            </div>
          
@@ -225,43 +375,20 @@ const ContenidoCargaArchivos = () => {
             // Contenedor principal de previsualización - Aumentado en tamaño
             <div className="border border-blue-600 border-dashed rounded-lg h-full min-h-screen relative mx-4">
               <button 
-                className="absolute top-2 right-2 bg-red-100 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
+                className="absolute top-1 right-2 ml-1 bg-red-100 rounded-full p-1 hover:bg-red-200 transition-colors z-10"
                 onClick={() => {
                   setFile(null);
                   setPreview(null);
                 }}
               >
-                <X size={16} className="text-red-500" />
+                <X size={16} className="text-red-500 " />
               </button>
               
-              {/* Previsualización según tipo de archivo */}
+              {/* Previsualización según tipo de archivo - Solo Excel */}
               <div className="h-full w-full flex items-center justify-center">
-                {preview?.type === 'image' && (
-                  <div className="h-full w-full overflow-hidden flex items-center justify-center p-4">
-                    <img 
-                      src={preview.url} 
-                      alt="Vista previa" 
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                )}
-                
-                {preview?.type === 'pdf' && (
-                  <div className="h-full w-full p-2">
-                    <iframe 
-                      src={preview.url} 
-                      className="w-full h-full border-0" 
-                      title="Previsualización PDF"
-                      style={{ minHeight: "calc(100vh - 250px)" }}
-                    />
-                  </div>
-                )}
-                
                 {preview?.type === 'generic' && (
                   <div className="flex flex-col items-center justify-center p-4">
-                    {preview.extension === 'docx' || preview.extension === 'doc' ? (
-                      <FileText size={96} className="text-blue-500 mb-6" />
-                    ) : preview.extension === 'xlsx' || preview.extension === 'xls' ? (
+                    {preview.extension === 'xlsx' || preview.extension === 'xls' ? (
                       <File size={96} className="text-green-500 mb-6" />
                     ) : (
                       <File size={96} className="text-gray-500 mb-6" />
@@ -280,15 +407,25 @@ const ContenidoCargaArchivos = () => {
         <div className="mb-6 mx-4">
           <label className="block text-gray-700 mb-2 text-lg">Acta actualizada hasta:</label>
           <div className="relative w-full max-w-md">
-            <input
-              ref={inputRef}
-              type="text"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-full py-3 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
-              onClick={() => setShowDatePicker(true)}
-              readOnly
-            />
+          <input
+  ref={inputRef}
+  type="text"
+  value={fecha}
+  onChange={handleDateChange}
+  onBlur={() => {
+    if (isValidDate(fecha)) {
+      setFecha(formatDateString(fecha));
+    } else {
+      // Si la fecha no es válida o es futura, revertir a la fecha actual
+      const today = new Date();
+      setFecha(`${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`);
+      showErrorNotification('Fecha inválida o futura. Se ha restablecido a la fecha actual.');
+    }
+  }}
+  className="w-full py-3 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600"
+  onClick={() => setShowDatePicker(true)}
+  placeholder="DD/MM/AAAA"
+/>
             <div 
               className="absolute inset-y-0 right-0 flex items-center px-4 bg-gray-100 rounded-r-lg border-l border-gray-300 cursor-pointer"
               onClick={() => setShowDatePicker(!showDatePicker)}
@@ -329,12 +466,16 @@ const ContenidoCargaArchivos = () => {
                       day ? (
                         <button
                           key={i}
-                          className={`w-8 h-8 rounded-full text-sm hover:bg-blue-100
-                                  ${fecha === formatDate(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}`}
+                          className={`w-8 h-8 rounded-full text-sm 
+                                    ${fecha === formatDate(day) ? 'bg-blue-500 text-white' : 'text-gray-700'}
+                                    ${isFutureDate(day) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-blue-100'}`}
                           onClick={() => {
-                            setFecha(formatDate(day));
-                            setShowDatePicker(false);
+                            if (!isFutureDate(day)) {
+                              setFecha(formatDate(day));
+                              setShowDatePicker(false);
+                            }
                           }}
+                          disabled={isFutureDate(day)}
                         >
                           {day}
                         </button>
