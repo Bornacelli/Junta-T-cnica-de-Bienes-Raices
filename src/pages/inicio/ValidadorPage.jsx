@@ -14,13 +14,26 @@ const ValidadorPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [campoVacio, setCampoVacio] = useState(false);
 
   const handleChange = (e) => {
-    setLicencia(e.target.value);
+    const valor = e.target.value;
+    setLicencia(valor);
+    // Limpiar el estado de error de campo vacío cuando el usuario comienza a escribir
+    if (valor.trim() !== '') {
+      setCampoVacio(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validar que el campo no esté vacío
+    if (licencia.trim() === '') {
+      setCampoVacio(true);
+      return; // Detener la ejecución si el campo está vacío
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -165,7 +178,7 @@ const ValidadorPage = () => {
         <div className="mx-auto validator-container">
           <div className="bg-white rounded-lg shadow-xl">
             {/* Encabezado */}
-            <div className="p-4 sm:p-6 flex items-center border-b border-gray-100">
+            <div className="p-4 sm:p-6 flex items-center">
               <SearchCheck className="text-blue-600 mr-3 flex-shrink-0" size={24} />
               <h2 className="text-gray-700 text-xl font-medium">Validador de Licencia</h2>
             </div>
@@ -174,21 +187,24 @@ const ValidadorPage = () => {
             <div className="p-4 sm:p-6">
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                  <label htmlFor="licencia" className="block text-gray-600 mb-2 text-sm">
+                  <label htmlFor="licencia" className="block text-gray-600 mb-2 font-normal">
                     Ingresar Número de Licencia
                   </label>
                   <input
                     id="licencia"
                     type="text"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border ${campoVacio ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     value={licencia}
                     onChange={handleChange}
                     placeholder="Ingrese el número de licencia"
                     disabled={loading}
                   />
+                  {campoVacio && (
+                    <p className="text-red-500 text-sm mt-1">Por favor, ingrese un número de licencia.</p>
+                  )}
                 </div>
                 
-                <div className="mt-6">
+                <div className="mt-6 mb-10">
                   <button
                     type="submit"
                     className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors duration-200 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}

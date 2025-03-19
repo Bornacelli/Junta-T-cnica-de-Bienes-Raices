@@ -14,13 +14,26 @@ const Validador = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [campoVacio, setCampoVacio] = useState(false);
 
   const handleChange = (e) => {
-    setLicencia(e.target.value);
+    const valor = e.target.value;
+    setLicencia(valor);
+    // Limpiar el estado de error de campo vacío cuando el usuario comienza a escribir
+    if (valor.trim() !== '') {
+      setCampoVacio(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validar que el campo no esté vacío
+    if (licencia.trim() === '') {
+      setCampoVacio(true);
+      return; // Detener la ejecución si el campo está vacío
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -150,12 +163,15 @@ const Validador = () => {
             <input
               id="licencia"
               type="text"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={`w-full border ${campoVacio ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500`}
               value={licencia}
               onChange={handleChange}
               placeholder="Ingrese el número de licencia"
               disabled={loading}
             />
+            {campoVacio && (
+              <p className="text-red-500 text-sm mt-1">Por favor, ingrese un número de licencia.</p>
+            )}
           </div>
           
           <div className="mx-4 my-4">

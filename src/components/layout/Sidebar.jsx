@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
         className={`fixed inset-y-0 left-0 z-30 transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-screen bg-blue-600 text-white w-64`}
-        style={{ width: '16rem' }} // Ancho fijo de 16rem (equivalente a w-64)
+        style={{ width: '16rem' }} 
       >
         
         {/* Logo section */}

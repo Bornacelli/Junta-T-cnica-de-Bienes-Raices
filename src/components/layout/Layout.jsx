@@ -10,7 +10,7 @@ const Layout = () => {
   
   // Función para verificar si la pantalla es grande
   const isLargeScreen = () => {
-    return window.innerWidth >= 768; // md breakpoint en Tailwind
+    return window.innerWidth >= 768; 
   };
   
   // Efecto para sincronizar el estado del sidebar
@@ -19,7 +19,7 @@ const Layout = () => {
       const largeScreen = isLargeScreen();
       setSidebarOpen(largeScreen);
       
-      // Forzar actualización inmediata de los elementos
+     
       if (topbarRef.current) {
         topbarRef.current.style.marginLeft = largeScreen ? '16rem' : '0';
         topbarRef.current.style.width = largeScreen ? 'calc(100% - 16rem)' : '100%';

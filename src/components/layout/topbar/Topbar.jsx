@@ -9,23 +9,20 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
 
-  // Estados
   const [userDisplayName, setUserDisplayName] = useState('Usuario');
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Obtener datos del usuario cuando el componente se monta
-  // In Topbar.jsx, update your useEffect hook
+
   useEffect(() => {
-    console.log('useEffect se está ejecutando');
+   
   
     const fetchUserData = async () => {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
   
-      console.log('🔍 Token desde localStorage:', token);
-      console.log('🔍 User ID desde localStorage:', userId);
+      
   
       if (!token) {
         console.warn('No se encontró el token en localStorage');
@@ -41,25 +38,22 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
       }
   
       try {
-        console.log('==== INICIANDO FETCH DE USUARIO ====');
-        console.log('Realizando petición con ID:', userId);
-  
-        // Hacer la petición usando el ID dinámico
+        
         const response = await api.get(`/usuario_traer.php?id=${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
   
-        console.log('📩 Respuesta completa de la API:', response);
+       
   
         if (response.data && response.data.usu_nombre) {
-          console.log('✅ Datos recibidos:', response.data);
+          
           setUserDisplayName(response.data.usu_nombre);
         } else {
-          console.warn('⚠️ No se recibió un objeto válido de usuario.');
+          console.warn('No se recibió un objeto válido de usuario.');
           setUserDisplayName('Usuario');
         }
       } catch (error) {
-        console.error('❌ Error obteniendo datos del usuario:', error);
+        console.error('Error obteniendo datos del usuario:', error);
         setUserDisplayName('Usuario');
       } finally {
         setLoading(false);
