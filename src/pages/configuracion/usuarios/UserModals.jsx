@@ -101,7 +101,7 @@ export const ViewUserModal = ({ isOpen, onClose, user }) => {
 // Modal para Editar Usuario
 export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus }) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  const [formError, setFormError] = useState(""); // Añadir estado para el error
+  const [formError, setFormError] = useState(""); // Estado para el error
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -133,14 +133,24 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
     if (isOpen) {
       setIsAnimating(true);
       setFormError(""); // Limpiar error al abrir el modal
+      setErrors({}); // También limpiar errores de campo
     } else {
       // Allow time for exit animation
       const timer = setTimeout(() => {
         setIsAnimating(false);
+        setFormError(""); // Limpiar error también al cerrar completamente
+        setErrors({}); // Limpiar errores de validación
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  // Función para manejar cierre del modal con limpieza de errores
+  const handleClose = () => {
+    setFormError(""); // Limpiar el error general
+    setErrors({}); // Limpiar errores de campos
+    onClose(); // Llamar al onClose original
+  };
 
   useEffect(() => {
     if (user) {
@@ -150,7 +160,6 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
         email: user.usu_correo || '',
         phone: user.usu_telefono || '',
         type: user.usu_rol || 'Cliente',
-        // Mantenemos el estado pero ya no se mostrará en un select
         status: user.usu_estado === 1 ? 'Activo' : 'Inactivo'
       });
       setErrors({});
@@ -194,6 +203,11 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Limpiar formError cuando el usuario empieza a editar
+    if (formError) {
+      setFormError("");
+    }
+    
     // Validar según el tipo de campo
     if (name === 'phone' || name === 'code') {
       // Solo permitir números
@@ -233,6 +247,9 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
       // Si hay error, mostrarlo
       if (result && result.error) {
         setFormError(result.message);
+      } else {
+        // Si no hay error, cerrar el modal
+        handleClose();
       }
     }
   };
@@ -240,7 +257,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
   return (
     <div 
       className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100 backdrop-blur-sm bg-black/50' : 'opacity-0'}`}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div 
         className={`bg-white rounded-lg shadow-lg w-4/5 p-6 relative transition-all duration-300 ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-8'}`}
@@ -347,7 +364,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
           </div>
 
           {formError && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div className="mt-4 p-3 bg-red-100 text-sm text-red-700 rounded">
               <p className=''>{formError}</p>
             </div>
           )}
@@ -355,7 +372,7 @@ export const EditUserModal = ({ isOpen, onClose, user, onSave, onToggleStatus })
           <div className="mt-8 flex justify-end space-x-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancelar
@@ -388,13 +405,23 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
   
   const [errors, setErrors] = useState({});
 
+  // Función para manejar cierre del modal con limpieza de errores
+  const handleClose = () => {
+    setFormError(""); // Limpiar el error general
+    setErrors({}); // Limpiar errores de campos
+    onClose(); // Llamar al onClose original
+  };
+
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
+      setFormError(""); // Limpiar error al abrir modal
+      setErrors({}); // Limpiar errores de validación
     } else {
-      
       const timer = setTimeout(() => {
         setIsAnimating(false);
+        setFormError(""); // Limpiar error también al cerrar completamente
+        setErrors({}); // Limpiar errores de validación
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -412,6 +439,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
         status: 'Activo'
       });
       setErrors({});
+      setFormError(""); // Limpiar posibles errores al abrir
     }
   }, [isOpen]);
 
@@ -450,6 +478,11 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Limpiar formError cuando el usuario empieza a editar
+    if (formError) {
+      setFormError("");
+    }
     
     // Validar según el tipo de campo
     if (name === 'phone' || name === 'code') {
@@ -491,6 +524,9 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
       // Si hay error, mostrarlo
       if (result && result.error) {
         setFormError(result.message);
+      } else {
+        // Si todo va bien, cerrar modal (onSave se encarga del modal de contraseña)
+        handleClose();
       }
     }
   };
@@ -498,7 +534,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
   return (
     <div 
       className={`fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100 backdrop-blur-sm bg-black/50' : 'opacity-0'}`}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div 
         className={`bg-white rounded-lg shadow-lg w-4/5 p-6 relative transition-all duration-300 ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-8'}`}
@@ -607,25 +643,11 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
                   <option value="Cliente">Cliente</option>
                 </select>
               </div>
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estado
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-              </div> */}
             </div>
           </div>
 
           {formError && (
-              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700  rounded">
+              <div className="mt-4 p-3 bg-red-100 text-sm text-red-700 rounded">
                 <p className=''>{formError}</p>
               </div>
             )}
@@ -633,7 +655,7 @@ export const CreateUserModal = ({ isOpen, onClose, onSave }) => {
           <div className="mt-8 flex justify-end space-x-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cerrar

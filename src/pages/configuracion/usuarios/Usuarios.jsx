@@ -366,7 +366,7 @@ const handleToggleStatus = async (user, event) => {
     }
   };
   
-  // Función para aplicar filtro
+  // Función para aplicar filtro - MODIFICADA PARA HACERLA CASE-INSENSITIVE
   const applyFilter = (filterValue) => {
     if (!Array.isArray(users) || users.length === 0) {
       setFilteredUsers([]);
@@ -390,7 +390,14 @@ const handleToggleStatus = async (user, event) => {
         return (isActive && userIsActive) || (!isActive && !userIsActive);
       }));
     } else {
-      setFilteredUsers(users.filter(user => user.usu_rol === filterValue));
+      // Filtrado insensible a mayúsculas/minúsculas
+      const lowerCaseFilter = filterValue.toLowerCase();
+      
+      setFilteredUsers(users.filter(user => {
+        // Comprobamos si el rol existe y lo convertimos a minúsculas para comparar
+        const userRole = user.usu_rol ? user.usu_rol.toLowerCase() : '';
+        return userRole === lowerCaseFilter;
+      }));
     }
   };
   
@@ -618,4 +625,4 @@ const handleToggleStatus = async (user, event) => {
   );
 }
 
-export default UsersList
+export default UsersList;
