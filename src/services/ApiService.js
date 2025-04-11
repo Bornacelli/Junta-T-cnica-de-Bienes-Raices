@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// Esta será una referencia al método logout del contexto
-// Se asignará después de importar este servicio
+
 let logoutCallback = null;
 
 // Función para establecer la referencia al logout del contexto
@@ -9,9 +8,9 @@ export const setLogoutFunction = (logoutFn) => {
   logoutCallback = logoutFn;
 };
 
-// Crear una instancia de axios con la URL base
+//  URL base
 const api = axios.create({
-  baseURL: 'https://validador.htc-pa.com', 
+  baseURL: 'https://validador.runspc.com', 
   headers: {
     'Content-Type': 'application/json'
   }
