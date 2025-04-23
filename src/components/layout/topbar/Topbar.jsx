@@ -5,8 +5,9 @@ import NotificationsMenu from './NotificationsMenu';
 import { useNotifications } from '../../../context/NotificationContext';
 import api from '../../../services/ApiService';
 
-// Importa tu logo (asegúrate de tener la ruta correcta)
-import logoAproba from '../../../assets/logotipo A.png'; // Ajusta esta ruta según tu estructura de carpetas
+
+import logoAproba from '../../../assets/logotipo A.png'; 
+import logoAcobir from '../../../assets/logo-acobir.png';
 
 const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref) {
   const navigate = useNavigate();
@@ -103,13 +104,20 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
           className="h-8 mr-3" 
           style={{ filter: 'brightness(1) contrast(1)' }} // Ajusta si necesitas cambiar colores
         />
-        <div className="flex flex-col">
+        <div className="hidden md:flex flex-col">
           <h1 className="text-xl font-semibold text-gray-800">Panel Administrativo</h1>
           <p className="text-sm text-gray-500">{formatDate(currentDate)}</p>
         </div>
       </div>
 
       <div className="flex items-center space-x-4">
+        {/* Logo ACOBIR */}
+        <img 
+          src={logoAcobir} 
+          alt="Logo ACOBIR" 
+          className="h-12" 
+        />
+        
         <div className="relative">
           <button className="p-2 rounded-lg hover:bg-gray-100" onClick={() => setShowNotifications(!showNotifications)}>
             <Bell size={20} className="text-gray-600" />

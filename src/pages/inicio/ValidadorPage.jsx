@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SearchCheck, CircleCheck, AlertTriangle, XCircle, CalendarArrowDown, CalendarArrowUp, Scale, User } from 'lucide-react';
 import api from '../../services/ApiService';
 import logo from '../../assets/logo.png';
+import logoAcobir from '../../assets/logo-acobir.png'; // Importa el logo de ACOBIR
 
 const ValidadorPage = () => {
   const [licencia, setLicencia] = useState('');
@@ -151,7 +152,7 @@ const ValidadorPage = () => {
       />
       
       {/* Contenido principal (sobre el fondo) */}
-      <div className="w-full flex-grow">
+      <div className="w-full flex-grow flex flex-col">
         {/* Encabezado */}
         <div className="pt-4 px-4 pb-16">
           {/* Botón de inicio de sesión */}
@@ -178,7 +179,6 @@ const ValidadorPage = () => {
               style={{ filter: 'brightness(0) invert(1)' }}
             />
           </div>
-
         </div>
         
         {/* Contenedor del validador centrado y con ancho responsivo */}
@@ -283,6 +283,22 @@ const ValidadorPage = () => {
               )}
             </div>
           </div>
+        </div>
+        
+        {/* Espacio para evitar que el logo se superponga con el contenido */}
+        <div className="flex-grow"></div>
+        
+        {/* Logo de ACOBIR - ahora al final del contenedor, con margen superior */}
+        <div className="flex justify-end p-6 mt-8">
+          <img 
+            src={logoAcobir} 
+            alt="Logo ACOBIR" 
+            className="w-auto h-auto max-w-full" 
+            style={{
+              maxWidth: '180px',
+              height: 'auto'
+            }}
+          />
         </div>
       </div>
     </div>
