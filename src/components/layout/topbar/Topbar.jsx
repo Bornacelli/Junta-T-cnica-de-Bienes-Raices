@@ -5,6 +5,9 @@ import NotificationsMenu from './NotificationsMenu';
 import { useNotifications } from '../../../context/NotificationContext';
 import api from '../../../services/ApiService';
 
+// Importa tu logo (asegúrate de tener la ruta correcta)
+import logoAproba from '../../../assets/logotipo A.png'; // Ajusta esta ruta según tu estructura de carpetas
+
 const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref) {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
@@ -14,15 +17,10 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showNotifications, setShowNotifications] = useState(false);
 
-
   useEffect(() => {
-   
-  
     const fetchUserData = async () => {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
-  
-      
   
       if (!token) {
         console.warn('No se encontró el token en localStorage');
@@ -38,15 +36,11 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
       }
   
       try {
-        
         const response = await api.get(`/usuario_traer.php?id=${userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
   
-       
-  
         if (response.data && response.data.usu_nombre) {
-          
           setUserDisplayName(response.data.usu_nombre);
         } else {
           console.warn('No se recibió un objeto válido de usuario.');
@@ -101,9 +95,18 @@ const Topbar = forwardRef(function Topbar({ toggleSidebar, isSidebarOpen }, ref)
         <Menu size={24} />
       </button>
 
-      <div className="flex flex-col">
-        <h1 className="text-xl font-semibold text-gray-800">Demo</h1>
-        <p className="text-sm text-gray-500">{formatDate(currentDate)}</p>
+      <div className="flex items-center">
+        {/* Logo pequeño */}
+        <img 
+          src={logoAproba} 
+          alt="Logo Aproba" 
+          className="h-8 mr-3" 
+          style={{ filter: 'brightness(1) contrast(1)' }} // Ajusta si necesitas cambiar colores
+        />
+        <div className="flex flex-col">
+          <h1 className="text-xl font-semibold text-gray-800">Panel Administrativo</h1>
+          <p className="text-sm text-gray-500">{formatDate(currentDate)}</p>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">

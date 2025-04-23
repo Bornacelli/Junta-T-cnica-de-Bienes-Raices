@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SearchCheck, CircleCheck, AlertTriangle, XCircle, CalendarArrowDown, CalendarArrowUp, Scale, User } from 'lucide-react';
 import api from '../../services/ApiService';
+import logo from '../../assets/logo.png';
 
 const ValidadorPage = () => {
   const [licencia, setLicencia] = useState('');
@@ -169,9 +170,15 @@ const ValidadorPage = () => {
           </div>
           
           {/* Título */}
-          <div className="text-center text-white text-3xl font-bold py-8">
-            Demo - Validador de Bienes Raíces
+          <div className="text-center py-8 flex justify-center items-center">
+            <img 
+              src={logo}
+              alt="Logo de Aproba" 
+              className="h-28" 
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
           </div>
+
         </div>
         
         {/* Contenedor del validador centrado y con ancho responsivo */}

@@ -76,7 +76,9 @@ const Sidebar = ({ isOpen = true, toggleSidebar }) => {
         {/* Logo section */}
         <div className="p-6">
           <div className="flex items-center justify-center">
-            <img src={Logo} alt="Logo" />
+            <img src={Logo} alt="Logo"
+            style={{ filter: 'brightness(0) invert(1)' }}
+            />
           </div>
         </div>
         

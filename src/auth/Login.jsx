@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import {CornerDownLeft} from 'lucide-react';
 import api from '../services/ApiService';
 
+import logo from '../assets/logo.png'
+
 const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -94,15 +96,18 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700 m-4">
           <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <h1 className="text-center text-xl font-bold leading-tight tracking-tight text-gray-600 md:text-2xl dark:text-white">
+            
+            <div className="flex items-center justify-center mb-6">
+              <img 
+                src={logo} 
+                alt="Logo de la empresa" 
+                className="h-16"
+              />
+            </div>
+
+            <h1 className="text-center text-xl font-bold leading-tight tracking-tight text-gray-600 md:text-2xl dark:text-white mb-6">
               Inicia Sesión en tu cuenta
             </h1>
-            <a
-              href="#"
-              className="flex items-center justify-center mb-6 text-2xl font-semibold text-gray-400 dark:text-white"
-            >
-              Logotipo
-            </a>
 
             <form className="space-y-4 md:space-y-6" onSubmit={handleSubmit}>
               <div>
